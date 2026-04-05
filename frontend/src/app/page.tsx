@@ -461,6 +461,7 @@ export default function Dashboard() {
   const backendStatus = useBackendStatus();
   const spaceWeather = useDataKey('space_weather');
   const newsForBrief = useDataKey('news') as Array<{ title: string; source?: string }> | null;
+  const telegramForBrief = useDataKey('telegram_posts') as Array<{ text?: string; channel?: string; date?: number }> | null;
   const { regionStatus } = useSituationDetector();
   const overallStatus = Object.values(regionStatus).includes('red')
     ? 'red'
@@ -629,19 +630,30 @@ export default function Dashboard() {
   const situationalBriefContext = useMemo(() => {
     const lines: string[] = [`Global status: ${STATUS_LABEL[overallStatus] ?? overallStatus}`];
     if (correlationsForEscalation.length > 0) {
-      lines.push('Active alerts:');
-      correlationsForEscalation.slice(0, 6).forEach((c) => {
-        lines.push(`- ${c.type} [${c.severity}] score:${c.score} drivers:${c.drivers.slice(0, 2).join(', ')}`);
+      lines.push('\nACTIVE CORRELATION ALERTS:');
+      correlationsForEscalation.slice(0, 8).forEach((c) => {
+        lines.push(`- [${c.severity.toUpperCase()}] ${c.type} score:${c.score} — ${c.drivers.slice(0, 3).join('; ')}`);
       });
     }
     if (newsForBrief && newsForBrief.length > 0) {
-      lines.push('Recent headlines:');
-      newsForBrief.slice(0, 10).forEach((n) => {
+      lines.push('\nRECENT NEWS HEADLINES:');
+      newsForBrief.slice(0, 12).forEach((n) => {
         lines.push(`- ${n.title}${n.source ? ` (${n.source})` : ''}`);
       });
     }
+    if (telegramForBrief && telegramForBrief.length > 0) {
+      const recent = telegramForBrief
+        .filter((p) => p.text && p.text.length > 10)
+        .slice(0, 8);
+      if (recent.length > 0) {
+        lines.push('\nTELEGRAM SIGNAL FEED:');
+        recent.forEach((p) => {
+          lines.push(`- [${p.channel || 'unknown'}] ${(p.text ?? '').slice(0, 120)}`);
+        });
+      }
+    }
     return lines.join('\n');
-  }, [overallStatus, correlationsForEscalation, newsForBrief]);
+  }, [overallStatus, correlationsForEscalation, newsForBrief, telegramForBrief]);
 
   return (
     <>
@@ -962,13 +974,16 @@ export default function Dashboard() {
                   {/* Divider */}
                   <div className="w-px h-6 bg-[var(--border-primary)]" />
 
-                  {/* Situational Brief */}
-                  <div className="flex flex-col items-center justify-center">
+                  {/* Situational Brief — stopPropagation prevents cycleStyle from firing */}
+                  <div
+                    className="flex flex-col items-center justify-center"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <OllamaButton
                       label="BRIEF"
                       compact
                       popupUp
-                      prompt="You are a concise intelligence analyst. Summarise the current global situation in 3 short bullets covering: (1) most significant active alert, (2) top news story, (3) overall threat level assessment. Be direct and terse."
+                      prompt="You are a senior intelligence analyst. Using all provided data, give a full situational assessment covering: (1) most critical active alert and what it signals, (2) key news and Telegram signals and how they correlate, (3) current threat trajectory — is it escalating, stable, or de-escalating, (4) what to watch out for in the next 24h. Be direct, specific, and actionable. No filler."
                       context={situationalBriefContext}
                     />
                   </div>

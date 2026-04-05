@@ -93,7 +93,7 @@ export default function OllamaButton({ label, prompt, context, className, compac
   }
 
   const responsePanel = response && expanded ? (
-    <div className="p-2 bg-cyan-950/20 border border-cyan-900/30 text-[9px] font-mono text-[var(--text-secondary)] leading-relaxed max-h-40 overflow-y-auto styled-scrollbar whitespace-pre-wrap">
+    <div className="p-2 bg-[#060a12] border border-cyan-900/50 text-[9px] font-mono text-[var(--text-secondary)] leading-relaxed max-h-40 overflow-y-auto styled-scrollbar whitespace-pre-wrap shadow-xl">
       {response}
       {loading && <span className="animate-pulse text-cyan-500">▊</span>}
     </div>

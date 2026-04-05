@@ -2,14 +2,13 @@
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, Clock, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import React, { useEffect, useRef, useCallback } from 'react';
 import WikiImage from '@/components/WikiImage';
 import type { SelectedEntity, RegionDossier, FimiData } from "@/types/dashboard";
 import { useDataKeys } from '@/hooks/useDataStore';
 import { useWatchlist } from '@/hooks/useWatchlist';
 import { emitToast } from '@/lib/toastBus';
-import OllamaButton from '@/components/OllamaButton';
 
 import { lookupShodanHost } from '@/lib/shodanClient';
 import type { ShodanHost } from '@/types/shodan';
@@ -1369,18 +1368,9 @@ function NewsFeedInner({ selectedEntity, regionDossier, regionDossierLoading, on
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: "auto", opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
-                            className="text-[10px] text-cyan-500/80 mt-1 flex items-center justify-between font-bold relative z-10"
+                            className="text-[10px] text-cyan-500/80 mt-1 flex items-center font-bold relative z-10"
                         >
                             <span className="px-1 border border-cyan-500/30">SYS.STATUS: MONITORING</span>
-                            <div className="flex items-center gap-2">
-                                <OllamaButton
-                                    label="BRIEF"
-                                    compact
-                                    prompt={`You are a geopolitical intelligence analyst. Summarise today's top SEA headlines into a morning brief. Focus on military activity, conflict escalations, maritime incidents, and political developments. Format as 3 bullet points maximum. Be direct and intelligence-style terse.`}
-                                    context={news.slice(0, 20).map((n: any) => `- ${n.title} (${n.source})`).join('\n')}
-                                />
-                                <span className="flex items-center gap-1"><Clock size={10} /> {data?.last_updated ? formatTime(data.last_updated) : "SCANNING"}</span>
-                            </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
