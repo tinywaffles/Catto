@@ -8598,7 +8598,22 @@ async def ollama_query(request: Request):
             logger.warning("Web search failed: %s", exc)
             web_context = ""
 
-    # Build final prompt
+    import datetime as _dt
+    today = _dt.datetime.utcnow().strftime("%A, %B %d, %Y — %H:%M UTC")
+
+    # Hard system prompt — forces model to use provided sources, not hallucinate
+    system_prompt = (
+        f"You are Catto, a real-time OSINT intelligence analyst. "
+        f"Today's date and time is: {today}. "
+        "CRITICAL RULES you must follow without exception:\n"
+        "1. Your training data is OUTDATED. Do NOT use it for any current events, news, politics, conflicts, or real-world status.\n"
+        "2. If WEB SEARCH RESULTS are provided below, they are your ONLY source of truth for current events. Use them directly and cite the sources.\n"
+        "3. If no web results are provided, say clearly: 'I don't have live data on this — enable WEB search for current information.'\n"
+        "4. Never invent, assume, or extrapolate current events from training data.\n"
+        "5. Be direct, terse, and intelligence-analyst in style. No filler."
+    )
+
+    # Build user-facing prompt (separate from system)
     parts = []
     if web_context:
         parts.append(web_context)
@@ -8620,9 +8635,10 @@ async def ollama_query(request: Request):
                     f"{ollama_url}/api/generate",
                     json={
                         "model": "mistral-nemo:12b",
+                        "system": system_prompt,
                         "prompt": full_prompt,
                         "stream": True,
-                        "options": {"num_predict": 1024},
+                        "options": {"num_predict": 1024, "temperature": 0.3},
                     },
                 ) as resp:
                     if resp.status_code != 200:

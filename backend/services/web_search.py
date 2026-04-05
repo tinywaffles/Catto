@@ -38,8 +38,14 @@ async def ddg_search(query: str, max_results: int = 6, region: str = "us-en") ->
     """
     Search DuckDuckGo HTML interface and return a list of
     {"title", "url", "snippet"} dicts.
+    Appends current year and 'news' to bias toward recent results.
     """
-    url = f"https://html.duckduckgo.com/html/?q={quote_plus(query)}&kl={region}"
+    import datetime as _dt
+    year = _dt.datetime.utcnow().year
+    # Bias search toward recent news unless query already has year/news keywords
+    biased_query = query if any(w in query.lower() for w in ["news", "latest", str(year), str(year-1)]) \
+        else f"{query} {year} news"
+    url = f"https://html.duckduckgo.com/html/?q={quote_plus(biased_query)}&kl={region}&df=m"  # df=m = past month
     results: list[dict] = []
 
     try:
