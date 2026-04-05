@@ -1,0 +1,84 @@
+name: catto
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: catto-backend
+    ports:
+      - "${BIND:-127.0.0.1}:8002:8002"
+    environment:
+      - AIS_API_KEY=${AIS_API_KEY}
+      - OPENSKY_CLIENT_ID=${OPENSKY_CLIENT_ID}
+      - OPENSKY_CLIENT_SECRET=${OPENSKY_CLIENT_SECRET}
+      - LTA_ACCOUNT_KEY=${LTA_ACCOUNT_KEY}
+      - ADMIN_KEY=${ADMIN_KEY:-}
+      - FINNHUB_API_KEY=${FINNHUB_API_KEY:-}
+      - SHODAN_API_KEY=${SHODAN_API_KEY:-}
+      # MPA Oceans-X Singapore vessel positions snapshot
+      - OCEANS_X_API_KEY=${OCEANS_X_API_KEY:-}
+      # Telegram channel monitor (telethon MTProto)
+      - TELEGRAM_API_ID=${TELEGRAM_API_ID:-}
+      - TELEGRAM_API_HASH=${TELEGRAM_API_HASH:-}
+      # Override allowed CORS origins (comma-separated). Auto-detects LAN IPs if empty.
+      - CORS_ORIGINS=${CORS_ORIGINS:-}
+      # Infonet relay peer — set MESH_RELAY_PEERS in .env to enable mesh sync.
+      - MESH_RELAY_PEERS=${MESH_RELAY_PEERS:-}
+      # Shared transport auth for mesh peer push — set MESH_PEER_PUSH_SECRET in .env to enable.
+      - MESH_PEER_PUSH_SECRET=${MESH_PEER_PUSH_SECRET:-}
+    volumes:
+      - backend_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/api/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+          cpus: '2'
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-}
+    container_name: catto-frontend
+    ports:
+      - "${BIND:-127.0.0.1}:3002:3000"
+    environment:
+      # Points the Next.js server-side proxy at the backend container via Docker networking.
+      # Change this if your backend runs on a different host or port.
+      - BACKEND_URL=http://backend:8000
+      # Required for LTA DataMall API routes (road incidents, traffic speed bands)
+      - LTA_ACCOUNT_KEY=${LTA_ACCOUNT_KEY}
+      # AlienVault OTX threat intelligence — https://otx.alienvault.com/
+      - OTX_API_KEY=${OTX_API_KEY:-}
+      # IOC lookup API keys
+      - VIRUSTOTAL_API_KEY=${VIRUSTOTAL_API_KEY:-}
+      - ABUSEIPDB_API_KEY=${ABUSEIPDB_API_KEY:-}
+      # ACLED conflict data feed (cookie-based auth)
+      - ACLED_EMAIL=${ACLED_EMAIL:-}
+      - ACLED_PASSWORD=${ACLED_PASSWORD:-}
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1'
+
+volumes:
+  backend_data:

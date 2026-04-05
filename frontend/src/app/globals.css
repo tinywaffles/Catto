@@ -1,0 +1,470 @@
+@import 'tailwindcss';
+
+:root {
+  --background: #0d1117;
+  --foreground: #f1f5f9;
+  --bg-primary: #0d1117;
+  --bg-secondary: #0a0d12;
+  --bg-tertiary: #111827;
+  --bg-panel: rgba(13, 17, 23, 0.95);
+  --border-primary: rgba(100, 116, 139, 0.18);
+  --border-secondary: rgba(100, 116, 139, 0.30);
+  --border-glow: rgba(100, 116, 139, 0.08);
+  --text-primary: #f1f5f9;
+  --text-secondary: #93c5fd;
+  --text-muted: #64748b;
+  --text-heading: #ffffff;
+  --hover-accent: rgba(30, 41, 59, 0.4);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.12);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.22);
+  --font-sans:
+    system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+}
+
+/* Light theme: only the map basemap changes — UI stays dark */
+[data-theme='light'] {
+  --background: #0d1117;
+  --foreground: #f1f5f9;
+  --bg-primary: #0d1117;
+  --bg-secondary: #0a0d12;
+  --bg-tertiary: #111827;
+  --bg-panel: rgba(13, 17, 23, 0.95);
+  --border-primary: rgba(100, 116, 139, 0.18);
+  --border-secondary: rgba(100, 116, 139, 0.30);
+  --border-glow: rgba(100, 116, 139, 0.08);
+  --text-primary: #f1f5f9;
+  --text-secondary: #93c5fd;
+  --text-muted: #64748b;
+  --text-heading: #ffffff;
+  --hover-accent: rgba(30, 41, 59, 0.4);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.12);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.22);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Global interactive cursor hints */
+button:not(:disabled),
+[role='button']:not([aria-disabled='true']),
+a[href],
+summary,
+label[for],
+input[type='button']:not(:disabled),
+input[type='submit']:not(:disabled),
+input[type='reset']:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled,
+[role='button'][aria-disabled='true'],
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+}
+
+/* Styled thin scrollbar for dark HUD UI */
+.styled-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.styled-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.styled-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 10px;
+}
+
+.styled-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+.styled-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+/* DOS block cursor blink */
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+/* ── TERMINAL UTILITY CLASSES ── */
+
+/* text-glow: no glow in base theme */
+.text-glow {
+  text-shadow: none;
+}
+
+/* Terminal input — prompt style */
+.terminal-input {
+  border-radius: 0;
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  background: rgba(13, 17, 23, 0.6);
+}
+.terminal-input:focus {
+  border-color: rgba(147, 197, 253, 0.4);
+  box-shadow: none;
+  outline: none;
+}
+
+/* Map popup shared utilities */
+.map-popup {
+  background: rgba(13, 17, 23, 0.97);
+  border-radius: 2px;
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  padding: 10px 14px;
+  color: #f1f5f9;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace, 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', 'Noto Sans JP', 'Noto Sans KR',
+    sans-serif;
+  font-size: 11px;
+  min-width: 220px;
+  max-width: 320px;
+}
+
+.map-popup-title {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 6px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.map-popup-row {
+  margin-bottom: 4px;
+}
+
+.map-popup-subtitle {
+  font-size: 9px;
+  margin-bottom: 6px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+/* MapLibre Popup Overrides */
+/* Ensure popups always appear above deck.gl overlay canvas (ctrl container z-index: 2) */
+.maplibregl-popup {
+  z-index: 3 !important;
+}
+
+.maplibregl-popup-content {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.maplibregl-popup-tip {
+  display: none !important;
+}
+
+/* Focus mode: dim the map canvas when a popup is active */
+.map-focus-active .maplibregl-canvas-container {
+  filter: brightness(0.3);
+  transition: filter 0.3s ease;
+}
+
+.map-focus-active .maplibregl-popup {
+  z-index: 10 !important;
+}
+
+/* ── GLOBAL CYAN → BLUE REMAP ── */
+/* Replaces cyan neon accents with blue throughout the UI */
+
+.text-cyan-300 { color: #93c5fd !important; }
+.text-cyan-400 { color: #60a5fa !important; }
+.text-cyan-500 { color: #3b82f6 !important; }
+.text-cyan-600 { color: #2563eb !important; }
+.text-cyan-700 { color: #1d4ed8 !important; }
+
+.text-cyan-500\/50 { color: rgba(59, 130, 246, 0.5) !important; }
+.text-cyan-500\/70 { color: rgba(59, 130, 246, 0.7) !important; }
+.text-cyan-500\/80 { color: rgba(59, 130, 246, 0.8) !important; }
+
+.bg-cyan-300 { background-color: #93c5fd !important; }
+.bg-cyan-400 { background-color: #60a5fa !important; }
+.bg-cyan-500 { background-color: #3b82f6 !important; }
+.bg-cyan-500\/10 { background-color: rgba(59, 130, 246, 0.1) !important; }
+.bg-cyan-500\/20 { background-color: rgba(59, 130, 246, 0.2) !important; }
+.bg-cyan-500\/30 { background-color: rgba(59, 130, 246, 0.3) !important; }
+.bg-cyan-900\/30 { background-color: rgba(30, 58, 138, 0.3) !important; }
+.bg-cyan-900\/50 { background-color: rgba(30, 58, 138, 0.5) !important; }
+.bg-cyan-900\/60 { background-color: rgba(30, 58, 138, 0.6) !important; }
+.bg-cyan-950\/10 { background-color: rgba(23, 37, 84, 0.1) !important; }
+.bg-cyan-950\/30 { background-color: rgba(23, 37, 84, 0.3) !important; }
+.bg-cyan-950\/40 { background-color: rgba(23, 37, 84, 0.4) !important; }
+
+.border-cyan-400 { border-color: #60a5fa !important; }
+.border-cyan-500 { border-color: #3b82f6 !important; }
+.border-cyan-700 { border-color: #1d4ed8 !important; }
+.border-cyan-800 { border-color: #1e40af !important; }
+.border-cyan-900 { border-color: #1e3a8a !important; }
+.border-cyan-500\/10 { border-color: rgba(59, 130, 246, 0.1) !important; }
+.border-cyan-500\/20 { border-color: rgba(59, 130, 246, 0.2) !important; }
+.border-cyan-500\/30 { border-color: rgba(59, 130, 246, 0.3) !important; }
+.border-cyan-500\/40 { border-color: rgba(59, 130, 246, 0.4) !important; }
+.border-cyan-500\/50 { border-color: rgba(59, 130, 246, 0.5) !important; }
+.border-cyan-800\/40 { border-color: rgba(30, 64, 175, 0.4) !important; }
+.border-cyan-800\/50 { border-color: rgba(30, 64, 175, 0.5) !important; }
+.border-cyan-800\/60 { border-color: rgba(30, 64, 175, 0.6) !important; }
+.border-cyan-900\/50 { border-color: rgba(30, 58, 138, 0.5) !important; }
+.border-b-cyan-900 { border-bottom-color: #1e3a8a !important; }
+.border-l-cyan-500 { border-left-color: #3b82f6 !important; }
+
+.hover\:text-cyan-300:hover { color: #93c5fd !important; }
+.hover\:text-cyan-400:hover { color: #60a5fa !important; }
+.hover\:bg-cyan-300:hover { background-color: #93c5fd !important; }
+.hover\:bg-cyan-500\/20:hover { background-color: rgba(59, 130, 246, 0.2) !important; }
+.hover\:bg-cyan-900\/50:hover { background-color: rgba(30, 58, 138, 0.5) !important; }
+.hover\:bg-cyan-950\/30:hover { background-color: rgba(23, 37, 84, 0.3) !important; }
+.hover\:border-cyan-300:hover { border-color: #93c5fd !important; }
+.hover\:border-cyan-500:hover { border-color: #3b82f6 !important; }
+.hover\:border-cyan-500\/40:hover { border-color: rgba(59, 130, 246, 0.4) !important; }
+.hover\:border-cyan-500\/50:hover { border-color: rgba(59, 130, 246, 0.5) !important; }
+.hover\:border-cyan-600:hover { border-color: #2563eb !important; }
+.hover\:border-cyan-800:hover { border-color: #1e40af !important; }
+.accent-cyan-500 { accent-color: #3b82f6 !important; }
+
+/* ── MATRIX HUD COLOR THEME ── */
+/* Remaps blue accents → green within .hud-zone containers only */
+[data-hud='matrix'] .hud-zone {
+  --text-secondary: #4ade80;
+  --text-muted: #16a34a;
+  --text-heading: #bbf7d0;
+  --hover-accent: rgba(5, 46, 22, 0.2);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.12);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.25);
+  --border-primary: rgba(22, 163, 74, 0.30);
+  --border-secondary: rgba(22, 163, 74, 0.45);
+  --border-glow: rgba(34, 197, 94, 0.18);
+}
+[data-hud='matrix'] .hud-zone .text-glow {
+  text-shadow: none;
+}
+
+/* --- Text color overrides --- */
+[data-hud='matrix'] .hud-zone .text-cyan-300 {
+  color: #86efac !important;
+}
+[data-hud='matrix'] .hud-zone .text-cyan-400 {
+  color: #4ade80 !important;
+}
+[data-hud='matrix'] .hud-zone .text-cyan-500 {
+  color: #22c55e !important;
+}
+[data-hud='matrix'] .hud-zone .text-cyan-600 {
+  color: #16a34a !important;
+}
+[data-hud='matrix'] .hud-zone .text-cyan-700 {
+  color: #15803d !important;
+}
+[data-hud='matrix'] .hud-zone .text-cyan-500\/50 {
+  color: rgba(34, 197, 94, 0.5) !important;
+}
+[data-hud='matrix'] .hud-zone .text-cyan-500\/70 {
+  color: rgba(34, 197, 94, 0.7) !important;
+}
+[data-hud='matrix'] .hud-zone .text-cyan-500\/80 {
+  color: rgba(34, 197, 94, 0.8) !important;
+}
+
+/* --- Background color overrides --- */
+[data-hud='matrix'] .hud-zone .bg-cyan-400 {
+  background-color: #4ade80 !important;
+}
+[data-hud='matrix'] .hud-zone .bg-cyan-300 {
+  background-color: #86efac !important;
+}
+[data-hud='matrix'] .hud-zone .bg-cyan-500 {
+  background-color: #22c55e !important;
+}
+[data-hud='matrix'] .hud-zone .bg-cyan-500\/10 {
+  background-color: rgba(34, 197, 94, 0.1) !important;
+}
+[data-hud='matrix'] .hud-zone .bg-cyan-500\/20 {
+  background-color: rgba(34, 197, 94, 0.2) !important;
+}
+[data-hud='matrix'] .hud-zone .bg-cyan-500\/30 {
+  background-color: rgba(34, 197, 94, 0.3) !important;
+}
+[data-hud='matrix'] .hud-zone .bg-cyan-900\/30 {
+  background-color: rgba(20, 83, 45, 0.3) !important;
+}
+[data-hud='matrix'] .hud-zone .bg-cyan-900\/50 {
+  background-color: rgba(20, 83, 45, 0.5) !important;
+}
+[data-hud='matrix'] .hud-zone .bg-cyan-900\/60 {
+  background-color: rgba(20, 83, 45, 0.6) !important;
+}
+[data-hud='matrix'] .hud-zone .bg-cyan-950\/10 {
+  background-color: rgba(5, 46, 22, 0.1) !important;
+}
+[data-hud='matrix'] .hud-zone .bg-cyan-950\/30 {
+  background-color: rgba(5, 46, 22, 0.3) !important;
+}
+[data-hud='matrix'] .hud-zone .bg-cyan-950\/40 {
+  background-color: rgba(5, 46, 22, 0.4) !important;
+}
+
+/* --- Border color overrides --- */
+[data-hud='matrix'] .hud-zone .border-cyan-400 {
+  border-color: #4ade80 !important;
+}
+[data-hud='matrix'] .hud-zone .border-cyan-500 {
+  border-color: #22c55e !important;
+}
+[data-hud='matrix'] .hud-zone .border-cyan-700 {
+  border-color: #15803d !important;
+}
+[data-hud='matrix'] .hud-zone .border-cyan-800 {
+  border-color: #166534 !important;
+}
+[data-hud='matrix'] .hud-zone .border-cyan-900 {
+  border-color: #14532d !important;
+}
+[data-hud='matrix'] .hud-zone .border-cyan-500\/10 {
+  border-color: rgba(34, 197, 94, 0.1) !important;
+}
+[data-hud='matrix'] .hud-zone .border-cyan-500\/20 {
+  border-color: rgba(34, 197, 94, 0.2) !important;
+}
+[data-hud='matrix'] .hud-zone .border-cyan-500\/30 {
+  border-color: rgba(34, 197, 94, 0.3) !important;
+}
+[data-hud='matrix'] .hud-zone .border-cyan-500\/40 {
+  border-color: rgba(34, 197, 94, 0.4) !important;
+}
+[data-hud='matrix'] .hud-zone .border-cyan-500\/50 {
+  border-color: rgba(34, 197, 94, 0.5) !important;
+}
+[data-hud='matrix'] .hud-zone .border-cyan-800\/40 {
+  border-color: rgba(22, 101, 52, 0.4) !important;
+}
+[data-hud='matrix'] .hud-zone .border-cyan-800\/50 {
+  border-color: rgba(22, 101, 52, 0.5) !important;
+}
+[data-hud='matrix'] .hud-zone .border-cyan-800\/60 {
+  border-color: rgba(22, 101, 52, 0.6) !important;
+}
+[data-hud='matrix'] .hud-zone .border-cyan-900\/50 {
+  border-color: rgba(20, 83, 45, 0.5) !important;
+}
+[data-hud='matrix'] .hud-zone .border-b-cyan-900 {
+  border-bottom-color: #14532d !important;
+}
+[data-hud='matrix'] .hud-zone .border-l-cyan-500 {
+  border-left-color: #22c55e !important;
+}
+
+/* --- Hover text --- */
+[data-hud='matrix'] .hud-zone .hover\:text-cyan-300:hover {
+  color: #86efac !important;
+}
+[data-hud='matrix'] .hud-zone .hover\:text-cyan-400:hover {
+  color: #4ade80 !important;
+}
+
+/* --- Hover background --- */
+[data-hud='matrix'] .hud-zone .hover\:bg-cyan-300:hover {
+  background-color: #86efac !important;
+}
+[data-hud='matrix'] .hud-zone .hover\:bg-cyan-500\/20:hover {
+  background-color: rgba(34, 197, 94, 0.2) !important;
+}
+[data-hud='matrix'] .hud-zone .hover\:bg-cyan-900\/50:hover {
+  background-color: rgba(20, 83, 45, 0.5) !important;
+}
+[data-hud='matrix'] .hud-zone .hover\:bg-cyan-950\/30:hover {
+  background-color: rgba(5, 46, 22, 0.3) !important;
+}
+
+/* --- Hover border --- */
+[data-hud='matrix'] .hud-zone .hover\:border-cyan-300:hover {
+  border-color: #86efac !important;
+}
+[data-hud='matrix'] .hud-zone .hover\:border-cyan-500:hover {
+  border-color: #22c55e !important;
+}
+[data-hud='matrix'] .hud-zone .hover\:border-cyan-500\/40:hover {
+  border-color: rgba(34, 197, 94, 0.4) !important;
+}
+[data-hud='matrix'] .hud-zone .hover\:border-cyan-500\/50:hover {
+  border-color: rgba(34, 197, 94, 0.5) !important;
+}
+[data-hud='matrix'] .hud-zone .hover\:border-cyan-600:hover {
+  border-color: #16a34a !important;
+}
+[data-hud='matrix'] .hud-zone .hover\:border-cyan-800:hover {
+  border-color: #166534 !important;
+}
+
+/* --- Accent (range inputs) --- */
+[data-hud='matrix'] .hud-zone .accent-cyan-500 {
+  accent-color: #22c55e !important;
+}
+
+/* ── INFONET TERMINAL ── */
+
+/* Monospace font for terminal/data display */
+.infonet-font {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+}
+
+/* CRT class: neutralized — no scanlines, no flicker */
+.crt {
+  position: relative;
+}
+
+/* Ticker animation for InfoNet */
+@keyframes infonet-ticker {
+  0% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.animate-ticker {
+  display: inline-block;
+  white-space: nowrap;
+  animation: infonet-ticker 90s linear infinite;
+}
+
+/* Scoped scrollbar for terminal */
+.crt ::-webkit-scrollbar {
+  width: 8px;
+}
+.crt ::-webkit-scrollbar-track {
+  background: #0d1117;
+}
+.crt ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+.crt ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}

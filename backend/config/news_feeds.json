@@ -1,0 +1,159 @@
+{
+  "feeds": [
+    {
+      "name": "CNA",
+      "url": "https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml",
+      "weight": 5
+    },
+    {
+      "name": "Straits Times",
+      "url": "https://www.straitstimes.com/news/singapore/rss.xml",
+      "weight": 5
+    },
+    {
+      "name": "Today Online",
+      "url": "https://www.todayonline.com/rss",
+      "weight": 4
+    },
+    {
+      "name": "The Hacker News",
+      "url": "https://feeds.feedburner.com/TheHackersNews",
+      "weight": 5
+    },
+    {
+      "name": "BleepingComputer",
+      "url": "https://www.bleepingcomputer.com/feed/",
+      "weight": 5
+    },
+    {
+      "name": "Dark Reading",
+      "url": "https://www.darkreading.com/rss/all.xml",
+      "weight": 5
+    },
+    {
+      "name": "Krebs on Security",
+      "url": "https://krebsonsecurity.com/feed/",
+      "weight": 5
+    },
+    {
+      "name": "SecurityWeek",
+      "url": "https://feeds.feedburner.com/securityweek",
+      "weight": 5
+    },
+    {
+      "name": "The CyberWire",
+      "url": "https://thecyberwire.com/rss.xml",
+      "weight": 5
+    },
+    {
+      "name": "SANS ISC",
+      "url": "https://isc.sans.edu/rssfeed.xml",
+      "weight": 5
+    },
+    {
+      "name": "Unit42",
+      "url": "https://unit42.paloaltonetworks.com/feed/",
+      "weight": 5
+    },
+    {
+      "name": "Cisco Talos",
+      "url": "https://blog.talosintelligence.com/feeds/posts/default",
+      "weight": 5
+    },
+    {
+      "name": "Recorded Future",
+      "url": "https://www.recordedfuture.com/feed/",
+      "weight": 5
+    },
+    {
+      "name": "US-CERT Alerts",
+      "url": "https://www.cisa.gov/uscert/ncas/alerts.xml",
+      "weight": 5
+    },
+    {
+      "name": "CISA News",
+      "url": "https://www.cisa.gov/news.xml",
+      "weight": 5
+    },
+    {
+      "name": "Bellingcat",
+      "url": "https://www.bellingcat.com/feed/",
+      "weight": 5
+    },
+    {
+      "name": "OCCRP",
+      "url": "https://www.occrp.org/en/rss",
+      "weight": 5
+    },
+    {
+      "name": "ProPublica",
+      "url": "https://www.propublica.org/feeds/propublica/main",
+      "weight": 4
+    },
+    {
+      "name": "The War Zone",
+      "url": "https://www.twz.com/feed",
+      "weight": 5
+    },
+    {
+      "name": "War on the Rocks",
+      "url": "https://warontherocks.com/feed/",
+      "weight": 5
+    },
+    {
+      "name": "Institute for the Study of War",
+      "url": "https://www.understandingwar.org/rss.xml",
+      "weight": 5
+    },
+    {
+      "name": "Defense News",
+      "url": "https://www.defensenews.com/arc/outboundfeeds/rss/",
+      "weight": 4
+    },
+    {
+      "name": "SCMP",
+      "url": "https://www.scmp.com/rss/91/feed",
+      "weight": 4
+    },
+    {
+      "name": "Yonhap",
+      "url": "https://en.yna.co.kr/RSS/news.xml",
+      "weight": 4
+    },
+    {
+      "name": "The Diplomat",
+      "url": "https://thediplomat.com/feed/",
+      "weight": 4
+    },
+    {
+      "name": "Reuters",
+      "url": "https://feeds.reuters.com/Reuters/worldNews",
+      "weight": 3
+    },
+    {
+      "name": "BBC",
+      "url": "http://feeds.bbci.co.uk/news/world/rss.xml",
+      "weight": 3
+    },
+    {
+      "name": "Guardian",
+      "url": "https://www.theguardian.com/world/rss",
+      "weight": 3
+    },
+    {
+      "name": "AlJazeera",
+      "url": "https://www.aljazeera.com/xml/rss/all.xml",
+      "weight": 2
+    },
+    {
+      "name": "NYT",
+      "url": "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
+      "weight": 2
+    },
+    {
+      "name": "GDACS",
+      "url": "https://www.gdacs.org/xml/rss.xml",
+      "weight": 5
+    }
+  ]
+}

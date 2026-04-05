@@ -1,0 +1,202 @@
+# catto .gitignore
+# ----------------------
+
+# Dependencies
+node_modules/
+venv/
+env/
+.venv/
+
+# Environment Variables & Secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Python caches & compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.ruff_cache/
+.pytest_cache/
+
+# Next.js build output
+.next/
+out/
+build/
+
+# Deprecated standalone Infonet Terminal skeleton (migrated into frontend/src/components/InfonetTerminal/)
+frontend/infonet-terminal/
+
+# Rust build artifacts (privacy-core)
+target/
+target-test/
+
+# ========================
+# LOCAL-ONLY: extra/ folder
+# ========================
+# All internal docs, planning files, raw data, backups, and dev scratch
+# live here. NEVER commit this folder.
+extra/
+
+# ========================
+# Application caches & runtime DBs (regenerate on startup)
+# ========================
+backend/ais_cache.json
+backend/carrier_cache.json
+backend/cctv.db
+cctv.db
+*.sqlite3
+
+# ========================
+# backend/data/ — blanket ignore, whitelist static reference files
+# ========================
+# Everything in data/ is runtime-generated state (encrypted keys,
+# MLS bindings, relay spools, caches) and MUST NOT be committed.
+# Only static reference datasets that ship with the repo are whitelisted.
+backend/data/*
+!backend/data/datacenters.json
+!backend/data/datacenters_geocoded.json
+!backend/data/military_bases.json
+!backend/data/plan_ccg_vessels.json
+!backend/data/plane_alert_db.json
+!backend/data/tracked_names.json
+!backend/data/yacht_alert_db.json
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Vercel / Deployment
+.vercel
+
+# ========================
+# Temp / scratch / debug files
+# ========================
+tmp/
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+out.txt
+out_sys.txt
+rss_output.txt
+merged.txt
+tmp_fast.json
+diff.txt
+local_diff.txt
+map_diff.txt
+TERMINAL
+
+# Debug dumps & release artifacts
+backend/dump.json
+backend/debug_fast.json
+backend/nyc_sample.json
+backend/nyc_full.json
+backend/liveua_test.html
+backend/out_liveua.json
+backend/out.json
+backend/temp.json
+backend/seattle_sample.json
+backend/sgp_sample.json
+backend/wsdot_sample.json
+backend/xlsx_analysis.txt
+frontend/server_logs*.txt
+frontend/cctv.db
+frontend/eslint-report.json
+*.zip
+*.tar.gz
+*.xlsx
+
+# Old backups & repo clones
+.git_backup/
+local-artifacts/
+catto_repo/
+frontend/src/components.bak/
+frontend/src/components/map/icons/backups/
+
+# Coverage
+coverage/
+.coverage
+dist/
+
+# Test scratch files (not in tests/ folder)
+backend/test_*.py
+backend/services/test_*.py
+
+# Local analysis & dev tools
+backend/analyze_xlsx.py
+backend/services/ais_cache.json
+
+# ========================
+# Internal docs & brainstorming (never commit)
+# ========================
+docs/*
+!docs/mesh/
+docs/mesh/*
+!docs/mesh/mesh-canonical-fixtures.json
+!docs/mesh/mesh-merkle-fixtures.json
+.local-docs/
+infonet-economy/
+updatestuff.md
+ROADMAP.md
+UPDATEPROTOCOL.md
+CLAUDE.md
+DOCKER_SECRETS.md
+
+# Misc dev artifacts
+clean_zip.py
+zip_repo.py
+refactor_cesium.py
+jobs.json
+
+# Claude / AI / MCP
+.claude
+.mcp.json
+.mise.local.toml
+.codex-tmp/
+prototype/
+
+# Python UV lock file (regenerated from pyproject.toml)
+uv.lock
+
+# Electron build output and compiled runtime binaries
+electron/dist/
+electron/out/
+*.exe
+*.dll
+*.pak
+*.dat
+locales/
+snapshot_blob.bin
+v8_context_snapshot.bin
+vk_swiftshader.dll
+vulkan-1.dll
+chrome_*.pak
+resources.pak
+icudtl.dat
+libEGL.dll
+libGLESv2.dll
+ffmpeg.dll
+d3dcompiler_47.dll
+
+# Screenshot is explicitly tracked
+!docs/screenshot.png
