@@ -164,7 +164,7 @@ export function OllamaQueryInput({ context, placeholder, large }: OllamaQueryInp
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<string | null>(null);
   const [offline, setOffline] = useState(false);
-  const [webSearch, setWebSearch] = useState(true);
+  const [webSearch, setWebSearch] = useState(false);
   const [webSearching, setWebSearching] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -248,7 +248,7 @@ export function OllamaQueryInput({ context, placeholder, large }: OllamaQueryInp
         <button
           type="button"
           onClick={() => setWebSearch((v) => !v)}
-          title={webSearch ? 'Web search ON — Catto will search the internet' : 'Web search OFF — Catto uses only local data'}
+          title={webSearch ? 'WEB ON — Catto will search the internet for external info' : 'WEB OFF — Catto analyses only internal Catto feeds (default)'}
           className={`flex items-center gap-1 px-1.5 py-0.5 border text-[8px] font-mono transition-colors ${
             webSearch
               ? 'border-emerald-600/60 text-emerald-400 bg-emerald-950/30'
