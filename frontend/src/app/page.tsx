@@ -41,6 +41,7 @@ import { API_BASE } from '@/lib/api';
 import { useDataPolling, LAYER_TOGGLE_EVENT } from '@/hooks/useDataPolling';
 import { useBackendStatus, useDataKey } from '@/hooks/useDataStore';
 import { useWatchlist } from '@/hooks/useWatchlist';
+import { useSituationDetector } from '@/hooks/useSituationDetector';
 import { useSingaporeFeeds } from '@/hooks/useSingaporeFeeds';
 import { useCyberFeeds } from '@/hooks/useCyberFeeds';
 import { useAviationFeeds } from '@/hooks/useAviationFeeds';
@@ -450,6 +451,14 @@ export default function Dashboard() {
   const { entries: watchlistEntries, addEntry: addWatchlistEntry, removeEntry: removeWatchlistEntry, watchedEntities } = useWatchlist();
   const backendStatus = useBackendStatus();
   const spaceWeather = useDataKey('space_weather');
+  const { regionStatus } = useSituationDetector();
+  const overallStatus = Object.values(regionStatus).includes('red')
+    ? 'red'
+    : Object.values(regionStatus).includes('amber')
+      ? 'amber'
+      : 'green';
+  const STATUS_LABEL = { green: 'NO INCIDENT', amber: 'HEIGHTENED', red: 'ELEVATED' } as const;
+  const STATUS_COLOR = { green: 'text-green-400', amber: 'text-yellow-400', red: 'text-red-400' } as const;
 
   // Notify backend of layer toggles so it can skip disabled fetchers / stop streams.
   // After the POST completes, dispatch a custom event so useDataPolling immediately
@@ -922,31 +931,15 @@ export default function Dashboard() {
                   {/* Divider */}
                   <div className="w-px h-6 bg-[var(--border-primary)]" />
 
-                  {/* Space Weather */}
-                  {(() => {
-                    const sw = spaceWeather as { kp_index?: number; kp_text?: string } | undefined;
-                    return (
-                      <div
-                        className="flex flex-col items-center"
-                        title={`Kp Index: ${sw?.kp_index ?? 'N/A'}`}
-                      >
-                        <div className="text-[8px] text-[var(--text-muted)] font-mono tracking-[0.2em]">
-                          SOLAR
-                        </div>
-                        <div
-                          className={`text-[11px] font-mono font-bold ${
-                            (sw?.kp_index ?? 0) >= 5
-                              ? 'text-red-400'
-                              : (sw?.kp_index ?? 0) >= 4
-                                ? 'text-yellow-400'
-                                : 'text-green-400'
-                          }`}
-                        >
-                          {sw?.kp_text || 'N/A'}
-                        </div>
-                      </div>
-                    );
-                  })()}
+                  {/* Global Status */}
+                  <div className="flex flex-col items-center">
+                    <div className="text-[8px] text-[var(--text-muted)] font-mono tracking-[0.2em]">
+                      STATUS
+                    </div>
+                    <div className={`text-[11px] font-mono font-bold ${STATUS_COLOR[overallStatus]}`}>
+                      {STATUS_LABEL[overallStatus]}
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             )}

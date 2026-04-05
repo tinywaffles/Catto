@@ -27,6 +27,12 @@ const STATUS_TEXT: Record<RegionStatus, string> = {
   red:   'text-red-400',
 };
 
+const STATUS_LABEL: Record<RegionStatus, string> = {
+  green: 'NO INCIDENT',
+  amber: 'HEIGHTENED',
+  red:   'ELEVATED',
+};
+
 export default function GlobalSituationPanel() {
   const { regionStatus } = useSituationDetector();
   const [open, setOpen] = useState(false);
@@ -83,7 +89,7 @@ export default function GlobalSituationPanel() {
                   <span
                     className={`text-[7px] font-mono font-bold uppercase pr-1 ${STATUS_TEXT[status]}`}
                   >
-                    {status}
+                    {STATUS_LABEL[status]}
                   </span>
                 </div>
               );

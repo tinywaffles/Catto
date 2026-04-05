@@ -46,7 +46,6 @@ It is not a consumer app. It is an analyst workstation for a map.
 
 ### Singapore Pillar
 - **LTA road incidents** — live emergency and road event feed from LTA DataMall
-- **Traffic speed bands** — road segments colour-coded by speed (>90 km/h green → <10 km/h red)
 - **Bus stops** — 5,000+ LTA stops with codes and arrivals, visible from zoom 14+
 - **MPA Port Vessels** — live vessel positions from MPA OCEANS-X (ON by default)
 - **NEA PSI air quality** — regional PSI readings (North, South, East, West, Central), no API key required
@@ -71,7 +70,6 @@ It is not a consumer app. It is an analyst workstation for a map.
 - **PSK Reporter** — HF amateur radio propagation spots
 - **SatNOGS** — ground station network for satellite telemetry
 - **TinyGS** — LoRa satellite ground stations
-- **Meshtastic** — off-grid mesh radio node positions (Asia-Pacific)
 - **APRS** — amateur radio automatic position reporting (opt-in)
 
 ### Conflict Pillar
@@ -116,6 +114,8 @@ It is not a consumer app. It is an analyst workstation for a map.
 - **Morning briefing** — auto-generated intelligence summary on load
 
 ### UI & Performance
+- **Global situation indicator** — per-region status light driven by live signal spikes: green (no incident / low activity), yellow (heightened alert), red (significant activity across multiple signals)
+- **Top-bar STATUS widget** — single overall status derived from all regions; replaces the former solar/Kp index display; green = NO INCIDENT, yellow = HEIGHTENED, red = ELEVATED
 - **War-room dark UI** — Carto Dark Matter basemap, monospace display, collapsible panels
 - **deck.gl GPU rendering** — ships, flights, satellites, earthquakes, FIRMS fires, piracy, GDELT/UCDP conflict markers all rendered via deck.gl for GPU-accelerated performance
 - **Viewport culling engine** — only markers in visible bounds (+20% buffer) committed to GeoJSON for MapLibre layers; global layers bypass cull entirely
@@ -222,7 +222,6 @@ Data flow:
 | PSK Reporter | HF radio spots | None (public) |
 | SatNOGS | Ground stations | None (public) |
 | TinyGS | LoRa satellites | None (public) |
-| Meshtastic MQTT | Mesh radio nodes | None (public) |
 | APRS-IS | Amateur radio positions | None (public) |
 | Global Fishing Watch | Fishing activity events | `GFW_API_TOKEN` |
 | Telegram MTProto | Conflict channel monitor | `TELEGRAM_API_ID/HASH` |
@@ -242,7 +241,7 @@ Copy `.env.example` to `.env` and fill in the keys below.
 
 | Variable | Description | Where to get it |
 |----------|-------------|-----------------|
-| `LTA_ACCOUNT_KEY` | Singapore road incidents, traffic speed, bus stops | [datamall.mytransport.sg](https://datamall.mytransport.sg) → API access |
+| `LTA_ACCOUNT_KEY` | Singapore road incidents, bus stops | [datamall.mytransport.sg](https://datamall.mytransport.sg) → API access |
 | `OPENSKY_CLIENT_ID` | Flight tracking (commercial + military) | [opensky-network.org](https://opensky-network.org) → Account → API clients |
 | `OPENSKY_CLIENT_SECRET` | Paired with OPENSKY_CLIENT_ID | Same as above |
 | `AIS_API_KEY` | Live vessel AIS WebSocket stream | [aisstream.io](https://aisstream.io) → free tier |
