@@ -1,5 +1,11 @@
 @echo off
-title CATTO v8.0.0 -- Installer
+
+:: ─────────────────────────────────────────────────────────────────────────────
+:: VERSION -- change this one value to update everywhere
+set "CATTO_VERSION=8.0.0"
+:: ─────────────────────────────────────────────────────────────────────────────
+
+title CATTO v%CATTO_VERSION% -- Installer
 
 :: If we're already elevated, skip the splash to proceed directly
 if "%1"=="ELEVATED" goto :main
@@ -14,7 +20,7 @@ set "B64_LOGO=IOKWiOKWiOKWiOKWiOKWiOKWiOKVly DilojilojilojilojilojilZcg4paI4paI4
 powershell -NoProfile -Command "Write-Host ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($env:B64_LOGO))) -ForegroundColor Green"
 echo  =========================================================
 echo.
-echo   CATTO v8.0.0  Singapore OSINT Dashboard
+echo   CATTO v%CATTO_VERSION%  Singapore OSINT Dashboard
 echo   Ollama AI ^| Correlation Engine ^| Timeline ^| SEA Feeds
 echo.
 echo  =========================================================
@@ -39,7 +45,7 @@ mode con: cols=100 lines=30
 
 echo.
 echo  =========================================================
-echo   CATTO v8.0.0  Singapore OSINT Dashboard
+echo   CATTO v%CATTO_VERSION%  Singapore OSINT Dashboard
 echo   Ollama AI ^| Correlation Engine ^| Timeline ^| SEA Feeds
 echo   Installation Engine Initialized
 echo  =========================================================
@@ -127,7 +133,8 @@ if /i "%D_OPEN%"=="Y" start "" "https://www.docker.com/products/docker-desktop/"
 echo.
 :docker_retry
 set /p "RETRY=  Have you installed and started Docker Desktop? [Y/N]: "
-if /i not "!RETRY!"=="Y" (
+:: FIX: was "if /i not" which is invalid syntax; use NEQ instead
+if /i "!RETRY!" NEQ "Y" (
     echo  Skipping Docker... Catto cannot run without it.
     pause >nul
     goto :keepopen
@@ -151,13 +158,16 @@ echo  +-----------------------------------------------------+
 echo.
 :docker_start_retry
 set /p "RETRY=  Is Docker Desktop running now? [Y/N]: "
-if /i not "!RETRY!"=="Y" (
+:: FIX: was "if /i not" which is invalid syntax; use NEQ instead
+if /i "!RETRY!" NEQ "Y" (
     pause >nul
     goto :keepopen
 )
 docker info >nul 2>&1
 if errorlevel 1 goto :docker_start_retry
 echo  [OK] Docker daemon is running.
+:: FIX: explicit goto prevents accidental fall-through on some CMD versions
+goto :step3
 
 :: ─────────────────────────────────────────────────────────────────────────────
 :step3
@@ -195,7 +205,7 @@ if /i "%SKIP_NODE%"=="Y" (
 )
 :node_retry
 set /p "RETRY=  Have you installed Node.js? [Y/N]: "
-if /i not "!RETRY!"=="Y" (
+if /i "!RETRY!" NEQ "Y" (
     set "SKIP_ELECTRON=1"
     goto :step4
 )
@@ -234,7 +244,8 @@ if exist ".env" (
 
 echo.
 echo  =========================================================
-echo   API KEYS -- REQUIRED FOR CORE FUNCTIONALITY
+echo   API KEYS -- Required for core features
+echo   (fill in .env before or after installation)
 echo  =========================================================
 echo.
 echo   LTA_ACCOUNT_KEY      : datamall.mytransport.sg
@@ -242,6 +253,18 @@ echo   OPENSKY_CLIENT_ID    : opensky-network.org (free)
 echo   OPENSKY_CLIENT_SECRET: opensky-network.org (free)
 echo   AIS_API_KEY          : aisstream.io (free)
 echo   OCEANS_X_API_KEY     : mpa.gov.sg (Oceans-X portal)
+echo.
+echo   Optional (extra intelligence layers)
+echo   OTX_API_KEY          : otx.alienvault.com
+echo   VIRUSTOTAL_API_KEY   : virustotal.com
+echo   ABUSEIPDB_API_KEY    : abuseipdb.com
+echo   SHODAN_API_KEY       : shodan.io
+echo   FINNHUB_API_KEY      : finnhub.io
+echo   TELEGRAM_API_ID      : my.telegram.org
+echo   TELEGRAM_API_HASH    : my.telegram.org
+echo   ACLED_EMAIL          : acleddata.com
+echo   ACLED_PASSWORD       : acleddata.com
+echo   GFW_API_TOKEN        : globalfishingwatch.org
 echo.
 echo  =========================================================
 echo.
@@ -288,7 +311,8 @@ echo   (~7 GB download -- skip if you don't need on-device AI)
 echo  =========================================================
 echo.
 set /p "PULL_MODEL=  Pull Mistral-Nemo 12B AI model now? [Y/N]: "
-if /i not "!PULL_MODEL!"=="Y" goto :step8
+:: FIX: was "if /i not" which is invalid syntax; use NEQ instead
+if /i "!PULL_MODEL!" NEQ "Y" goto :step8
 
 echo  Waiting for Ollama container...
 timeout /t 5 >nul
@@ -352,7 +376,8 @@ echo   STEP 9 of 9 ^|  Desktop shortcut
 echo  =========================================================
 echo.
 set /p "DO_SHORT=  Create a Catto Desktop shortcut? [Y/N]: "
-if /i not "!DO_SHORT!"=="Y" goto :done
+:: FIX: was "if /i not" which is invalid syntax; use NEQ instead
+if /i "!DO_SHORT!" NEQ "Y" goto :done
 
 set "S_T=%CATTO_DIR%\start_catto.bat"
 set "S_I=%CATTO_DIR%\electron\assets\icon.ico"
@@ -360,12 +385,12 @@ for /f "delims=" %%d in ('powershell -NoProfile -Command "[Environment]::GetFold
 set "S_P=!D_P!\Catto.lnk"
 
 powershell -NoProfile -Command ^
-  "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut(\"%S_P%\"); $s.TargetPath = \"%S_T%\"; $s.WorkingDirectory = \"%CATTO_DIR%\"; $s.Description = 'Catto v8.1.3 OSINT Dashboard'; if (Test-Path \"%S_I%\") { $s.IconLocation = \"%S_I%\" }; $s.Save()" >nul 2>&1
+  "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut(\"%S_P%\"); $s.TargetPath = \"%S_T%\"; $s.WorkingDirectory = \"%CATTO_DIR%\"; $s.Description = 'Catto v%CATTO_VERSION% OSINT Dashboard'; if (Test-Path \"%S_I%\") { $s.IconLocation = \"%S_I%\" }; $s.Save()" >nul 2>&1
 
 if exist "!S_P!" (
     echo  [OK] Desktop shortcut created.
 ) else (
-    echo  [INFO] Shortcut creation failed.
+    echo  [INFO] Shortcut creation failed. Use "start_catto.bat" to launch.
 )
 
 :: ─────────────────────────────────────────────────────────────────────────────
@@ -373,7 +398,7 @@ if exist "!S_P!" (
 cls
 echo.
 echo  =========================================================
-if "%STEP_FAILED%"=="0" ( echo   CATTO v8.1.3 IS READY ) else ( echo   CATTO v8.1.3 -- READY WITH WARNINGS )
+if "%STEP_FAILED%"=="0" ( echo   CATTO v%CATTO_VERSION% IS READY ) else ( echo   CATTO v%CATTO_VERSION% -- READY WITH WARNINGS )
 echo  =========================================================
 echo.
 echo   Dashboard (browser):  http://localhost:3002
