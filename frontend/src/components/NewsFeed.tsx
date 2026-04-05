@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { OllamaQueryInput } from '@/components/OllamaButton';
 import React, { useEffect, useRef, useCallback } from 'react';
 import WikiImage from '@/components/WikiImage';
 import type { SelectedEntity, RegionDossier, FimiData } from "@/types/dashboard";
@@ -1349,31 +1350,30 @@ function NewsFeedInner({ selectedEntity, regionDossier, regionDossierLoading, on
             transition={{ duration: 0.8, delay: 0.2 }}
             className={`w-full bg-[#0a0a0a]/90 backdrop-blur-sm border border-cyan-900/40 flex flex-col z-10 font-mono pointer-events-auto overflow-hidden transition-all duration-300 ${isMinimized ? 'h-[50px] flex-shrink-0' : 'flex-1 min-h-0'}`}
         >
+            {/* Header — click to collapse/expand */}
             <div
-                className="p-3 border-b border-[var(--border-primary)]/50 relative overflow-hidden cursor-pointer hover:bg-[var(--bg-secondary)]/50 transition-colors"
+                className="px-3 pt-2 pb-1 border-b border-[var(--border-primary)]/50 cursor-pointer hover:bg-[var(--bg-secondary)]/30 transition-colors flex items-center justify-between"
                 onClick={() => setIsMinimized(!isMinimized)}
             >
-                <div className="flex justify-between items-center relative z-10">
-                    <h2 className="text-xs tracking-widest font-bold text-cyan-400 flex items-center gap-2">
-                        <AlertTriangle size={14} /> GLOBAL THREAT INTERCEPT
-                    </h2>
-                    <button className="text-cyan-500 hover:text-[var(--text-primary)] transition-colors">
-                        {isMinimized ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-                    </button>
-                </div>
+                <span className="text-[10px] font-mono font-bold tracking-widest text-cyan-400 flex items-center gap-1.5">
+                    <AlertTriangle size={10} className="flex-shrink-0" />
+                    INTEL FEED
+                </span>
+                <button className="text-cyan-500 hover:text-[var(--text-primary)] transition-colors">
+                    {isMinimized ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+                </button>
+            </div>
 
-                <AnimatePresence>
-                    {!isMinimized && (
-                        <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="text-[10px] text-cyan-500/80 mt-1 flex items-center font-bold relative z-10"
-                        >
-                            <span className="px-1 border border-cyan-500/30">SYS.STATUS: MONITORING</span>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+            {/* Ask Catto — always visible, not blocked by collapse */}
+            <div
+                className="border-b border-[var(--border-primary)]/40 pointer-events-auto"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <OllamaQueryInput
+                    large
+                    placeholder="Ask Catto anything about current events..."
+                    context={`You are an OSINT intelligence analyst assistant. The user is monitoring live global events on a situational awareness dashboard covering Southeast Asia and global threats. Answer questions directly, be concise and intelligence-style.`}
+                />
             </div>
 
             {/* Threat Level Indicator */}

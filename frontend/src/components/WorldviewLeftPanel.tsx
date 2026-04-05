@@ -39,7 +39,6 @@ import {
   Search,
 } from 'lucide-react';
 import OsintFeedsPanel from './OsintFeedsPanel';
-import { OllamaQueryInput } from './OllamaButton';
 import { API_BASE } from '@/lib/api';
 import { onTileLoadingChange, resetTileLoading } from '@/lib/sentinelHub';
 import packageJson from '../../package.json';
@@ -1858,11 +1857,6 @@ const WorldviewLeftPanel = React.memo(function WorldviewLeftPanel({
         </AnimatePresence>
       </div>
 
-      {/* ── Ask Catto AI query input ──────────────────────────────────── */}
-      <OllamaQueryInput
-        context={`Current time: ${new Date().toISOString()}. You are assisting an OSINT analyst monitoring the Southeast Asia region. Answer questions about current map data, threat levels, and geopolitical events concisely.`}
-        placeholder="Ask about current map data..."
-      />
     </motion.div>
   );
 });

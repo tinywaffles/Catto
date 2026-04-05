@@ -156,9 +156,10 @@ export default function OllamaButton({ label, prompt, context, className, compac
 interface OllamaQueryInputProps {
   context?: string;
   placeholder?: string;
+  large?: boolean;
 }
 
-export function OllamaQueryInput({ context, placeholder }: OllamaQueryInputProps) {
+export function OllamaQueryInput({ context, placeholder, large }: OllamaQueryInputProps) {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<string | null>(null);
@@ -209,35 +210,46 @@ export function OllamaQueryInput({ context, placeholder }: OllamaQueryInputProps
     }
   };
 
+  const px = large ? 'px-3' : 'px-3';
+  const inputCls = large
+    ? 'flex-1 bg-[#060a12] border border-cyan-900/50 text-[11px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-3 py-2 outline-none focus:border-cyan-600/60 transition-colors'
+    : 'flex-1 bg-[var(--bg-input,#0a0f1a)] border border-[var(--border-primary)] text-[9px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-2 py-1 outline-none focus:border-cyan-800/60 transition-colors';
+  const btnCls = large
+    ? 'px-3 py-2 bg-cyan-950/40 border border-cyan-800/50 text-[11px] font-mono text-cyan-400 hover:bg-cyan-900/30 disabled:opacity-40 transition-colors flex-shrink-0'
+    : 'px-2 py-1 bg-cyan-950/40 border border-cyan-800/50 text-[9px] font-mono text-cyan-400 hover:bg-cyan-900/30 disabled:opacity-40 transition-colors flex-shrink-0';
+  const responseCls = large
+    ? 'mt-2 p-3 bg-[#060a12] border border-cyan-900/50 text-[10px] font-mono text-[var(--text-secondary)] leading-relaxed max-h-48 overflow-y-auto styled-scrollbar whitespace-pre-wrap'
+    : 'mt-1.5 p-2 bg-[#060a12] border border-cyan-900/30 text-[9px] font-mono text-[var(--text-secondary)] leading-relaxed max-h-36 overflow-y-auto styled-scrollbar whitespace-pre-wrap';
+
   return (
-    <div className="border-t border-[var(--border-primary)] pt-2 pb-1">
-      <div className="px-3 flex items-center gap-1 mb-1">
-        <Bot size={8} className="text-cyan-500 flex-shrink-0" />
-        <span className="text-[8px] font-mono tracking-widest text-[var(--text-muted)] uppercase">
+    <div className={`${large ? 'p-3' : 'border-t border-[var(--border-primary)] pt-2 pb-1'}`}>
+      <div className={`${px} flex items-center gap-1.5 ${large ? 'mb-2' : 'mb-1'}`}>
+        <Bot size={large ? 12 : 8} className="text-cyan-500 flex-shrink-0" />
+        <span className={`${large ? 'text-[11px]' : 'text-[8px]'} font-mono tracking-widest text-cyan-400 uppercase font-bold`}>
           Ask Catto
         </span>
         {offline && (
-          <span className="text-[7px] font-mono text-red-400/60 ml-1">OFFLINE</span>
+          <span className={`${large ? 'text-[9px]' : 'text-[7px]'} font-mono text-red-400/70 ml-1`}>AI OFFLINE</span>
         )}
       </div>
-      <form onSubmit={handleSubmit} className="px-3 flex gap-1">
+      <form onSubmit={handleSubmit} className={`${px} flex gap-1.5`}>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={placeholder || 'Ask about current map data...'}
           disabled={loading}
-          className="flex-1 bg-[var(--bg-input,#0a0f1a)] border border-[var(--border-primary)] text-[9px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-2 py-1 outline-none focus:border-cyan-800/60 transition-colors"
+          className={inputCls}
         />
         <button
           type="submit"
           disabled={!query.trim() || loading}
-          className="px-2 py-1 bg-cyan-950/40 border border-cyan-800/50 text-[9px] font-mono text-cyan-400 hover:bg-cyan-900/30 disabled:opacity-40 transition-colors flex-shrink-0"
+          className={btnCls}
         >
-          {loading ? <Loader2 size={8} className="animate-spin" /> : '→'}
+          {loading ? <Loader2 size={large ? 12 : 8} className="animate-spin" /> : '→'}
         </button>
       </form>
       {response && (
-        <div className="mx-3 mt-1.5 p-2 bg-cyan-950/20 border border-cyan-900/30 text-[9px] font-mono text-[var(--text-secondary)] leading-relaxed max-h-36 overflow-y-auto styled-scrollbar whitespace-pre-wrap">
+        <div className={`${px} ${responseCls.startsWith('mt') ? responseCls : `mx-0 ${responseCls}`}`}>
           {response}
           {loading && <span className="animate-pulse text-cyan-500">▊</span>}
         </div>

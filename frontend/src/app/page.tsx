@@ -8,7 +8,7 @@ import WorldviewLeftPanel from '@/components/WorldviewLeftPanel';
 
 import NewsFeed from '@/components/NewsFeed';
 import MarketsPanel from '@/components/MarketsPanel';
-import FilterPanel from '@/components/FilterPanel';
+import MarkerLegendPanel from '@/components/MarkerLegendPanel';
 import FindLocateBar from '@/components/FindLocateBar';
 import TopBar from '@/components/TopBar';
 import SettingsPanel from '@/components/SettingsPanel';
@@ -861,14 +861,9 @@ export default function Dashboard() {
 
               {/* GLOBAL TICKER REPLACES MARKETS PANEL - RENDERED OUTSIDE THIS DIV */}
 
-              {/* DATA FILTERS */}
-              <div className={`flex-shrink-0 ${rightFocusedPanel && rightFocusedPanel !== 'filters' ? 'hidden' : ''}`}>
-                <ErrorBoundary name="FilterPanel">
-                  <FilterPanel
-                    activeFilters={activeFilters}
-                    setActiveFilters={setActiveFilters}
-                  />
-                </ErrorBoundary>
+              {/* MAP LEGEND */}
+              <div className="flex-shrink-0">
+                <MarkerLegendPanel />
               </div>
 
 
