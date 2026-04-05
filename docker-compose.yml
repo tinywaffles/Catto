@@ -85,8 +85,10 @@ services:
   ollama:
     image: ollama/ollama:latest
     container_name: catto-ollama
-    ports:
-      - "${BIND:-127.0.0.1}:11434:11434"
+    # No host port binding — backend reaches Ollama via Docker network (http://ollama:11434)
+    # Remove the comment below and expose the port if you need host access:
+    # ports:
+    #   - "${BIND:-127.0.0.1}:11434:11434"
     volumes:
       - ollama_data:/root/.ollama
     environment:
