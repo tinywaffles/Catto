@@ -286,16 +286,27 @@ Copy `.env.example` to `.env` and fill in the keys below.
 
 ### Windows (Recommended — Auto-Installer)
 
-1. Make sure **Docker Desktop** is installed and running
-2. Download or clone this repository
-3. Double-click **`install.bat`** (run as Administrator if prompted)
-   - Checks WSL, Docker, Node.js
-   - Creates `.env` from `.env.example`
-   - Builds Docker containers
-   - Installs Electron dependencies
-   - Creates a desktop shortcut
-4. Open **`.env`** in Notepad and fill in your API keys
-5. Launch Catto from the desktop shortcut or by running **`start_catto.bat`**
+1. Download or clone this repository
+2. Double-click **`install.bat`** (run as Administrator if prompted)
+
+The installer walks through 9 steps automatically:
+
+| Step | What it does |
+|------|-------------|
+| 1 | Checks/installs WSL 2 (required by Docker) |
+| 2 | Checks Docker Desktop is installed **and running** — prompts `Y` to retry if not |
+| 3 | Checks Node.js — offers to skip if not installed (browser access still works) |
+| 4 | Verifies Catto folder structure |
+| 5 | Creates `.env` from `.env.example`, offers to open in Notepad for key entry |
+| 6 | Builds Docker containers (first run ~3 GB download, 5–15 min) — prompts `Y` to retry on any failure |
+| 7 | Pulls Mistral-Nemo 12B AI model (~7 GB) — optional, skippable, retryable |
+| 8 | Installs Electron desktop app dependencies |
+| 9 | Creates a desktop shortcut |
+
+**At every failure point** the installer explains what went wrong and asks `Y/N` to retry — it never closes unexpectedly.
+
+3. Fill in your API keys in **`.env`** (the installer will offer to open it)
+4. Launch Catto from the desktop shortcut or run **`start_catto.bat`**
 
 If the installer fails at any step, see **Manual Installation** below.
 
@@ -334,13 +345,16 @@ cp .env.example .env
 # Open .env and add your API keys (see Environment Variables above)
 
 # 3. Build and start Docker containers
-#    First run downloads ~2 GB of base images — takes 5-10 minutes
+#    First run downloads ~3 GB of base images — takes 5-15 minutes
 docker compose up -d --build
 
-# 4. Open the dashboard in your browser
+# 4. (Optional) Pull the Ollama AI model — ~7 GB, needed for AI features
+docker exec catto-ollama ollama pull mistral-nemo:12b
+
+# 5. Open the dashboard in your browser
 #    http://localhost:3002
 
-# 5. (Optional) Install and launch the Electron desktop app
+# 6. (Optional) Install and launch the Electron desktop app
 cd electron
 npm install
 npm start
