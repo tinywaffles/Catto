@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { Bot, Loader2, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Bot, Loader2, X, ChevronDown, ChevronUp, Globe } from 'lucide-react';
 import { API_BASE } from '@/lib/api';
 
 interface OllamaButtonProps {
@@ -164,6 +164,8 @@ export function OllamaQueryInput({ context, placeholder, large }: OllamaQueryInp
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<string | null>(null);
   const [offline, setOffline] = useState(false);
+  const [webSearch, setWebSearch] = useState(true);
+  const [webSearching, setWebSearching] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -173,13 +175,14 @@ export function OllamaQueryInput({ context, placeholder, large }: OllamaQueryInp
     setLoading(true);
     setResponse(null);
     setOffline(false);
+    setWebSearching(false);
     abortRef.current = new AbortController();
 
     try {
       const res = await fetch(`${API_BASE}/api/ollama/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: query.trim(), context }),
+        body: JSON.stringify({ prompt: query.trim(), context, web_search: webSearch }),
         signal: abortRef.current.signal,
       });
 
@@ -198,6 +201,7 @@ export function OllamaQueryInput({ context, placeholder, large }: OllamaQueryInp
         for (const line of chunk.split('\n').filter(Boolean)) {
           try {
             const data = JSON.parse(line);
+            if (data.status === 'web_search_complete') { setWebSearching(false); continue; }
             if (data.error) { setOffline(true); reader.cancel(); return; }
             if (data.response) { fullText += data.response; setResponse(fullText); }
           } catch { /* skip */ }
@@ -207,6 +211,7 @@ export function OllamaQueryInput({ context, placeholder, large }: OllamaQueryInp
       if ((err as Error)?.name !== 'AbortError') setOffline(true);
     } finally {
       setLoading(false);
+      setWebSearching(false);
     }
   };
 
@@ -223,20 +228,44 @@ export function OllamaQueryInput({ context, placeholder, large }: OllamaQueryInp
 
   return (
     <div className={`${large ? 'p-3' : 'border-t border-[var(--border-primary)] pt-2 pb-1'}`}>
-      <div className={`${px} flex items-center gap-1.5 ${large ? 'mb-2' : 'mb-1'}`}>
-        <Bot size={large ? 12 : 8} className="text-cyan-500 flex-shrink-0" />
-        <span className={`${large ? 'text-[11px]' : 'text-[8px]'} font-mono tracking-widest text-cyan-400 uppercase font-bold`}>
-          Ask Catto
-        </span>
-        {offline && (
-          <span className={`${large ? 'text-[9px]' : 'text-[7px]'} font-mono text-red-400/70 ml-1`}>AI OFFLINE</span>
-        )}
+      {/* Header row */}
+      <div className={`${px} flex items-center justify-between gap-1.5 ${large ? 'mb-2' : 'mb-1'}`}>
+        <div className="flex items-center gap-1.5">
+          <Bot size={large ? 13 : 8} className="text-cyan-500 flex-shrink-0" />
+          <span className={`${large ? 'text-[12px]' : 'text-[8px]'} font-mono tracking-widest text-cyan-400 uppercase font-bold`}>
+            Ask Catto
+          </span>
+          {offline && (
+            <span className={`${large ? 'text-[9px]' : 'text-[7px]'} font-mono text-red-400/70 ml-1`}>AI OFFLINE</span>
+          )}
+          {webSearching && (
+            <span className="text-[9px] font-mono text-emerald-400 flex items-center gap-1 animate-pulse">
+              <Globe size={9} className="animate-spin" /> SEARCHING WEB...
+            </span>
+          )}
+        </div>
+        {/* Web search toggle */}
+        <button
+          type="button"
+          onClick={() => setWebSearch((v) => !v)}
+          title={webSearch ? 'Web search ON — Catto will search the internet' : 'Web search OFF — Catto uses only local data'}
+          className={`flex items-center gap-1 px-1.5 py-0.5 border text-[8px] font-mono transition-colors ${
+            webSearch
+              ? 'border-emerald-600/60 text-emerald-400 bg-emerald-950/30'
+              : 'border-[var(--border-primary)] text-[var(--text-muted)] hover:border-cyan-800/50'
+          }`}
+        >
+          <Globe size={8} />
+          WEB
+        </button>
       </div>
+
+      {/* Input row */}
       <form onSubmit={handleSubmit} className={`${px} flex gap-1.5`}>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder={placeholder || 'Ask about current map data...'}
+          placeholder={placeholder || (webSearch ? 'Ask anything — Catto will search the web...' : 'Ask about current map data...')}
           disabled={loading}
           className={inputCls}
         />
@@ -248,8 +277,10 @@ export function OllamaQueryInput({ context, placeholder, large }: OllamaQueryInp
           {loading ? <Loader2 size={large ? 12 : 8} className="animate-spin" /> : '→'}
         </button>
       </form>
+
+      {/* Response */}
       {response && (
-        <div className={`${px} ${responseCls.startsWith('mt') ? responseCls : `mx-0 ${responseCls}`}`}>
+        <div className={`${px} ${responseCls.startsWith('mt') ? '' : 'mt-2'} ${responseCls}`}>
           {response}
           {loading && <span className="animate-pulse text-cyan-500">▊</span>}
         </div>

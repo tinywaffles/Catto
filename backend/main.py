@@ -8564,10 +8564,11 @@ async def ollama_status(request: Request):
 
 
 @app.post("/api/ollama/query")
-@limiter.limit("10/minute")
+@limiter.limit("20/minute")
 async def ollama_query(request: Request):
-    """Stream a Mistral-Nemo response. Body: {prompt, context}."""
+    """Stream a Mistral-Nemo response. Body: {prompt, context, web_search?}."""
     import httpx
+    from services.web_search import web_search_with_content, results_to_news_items
 
     try:
         body = await request.json()
@@ -8576,15 +8577,44 @@ async def ollama_query(request: Request):
 
     prompt = str(body.get("prompt") or "").strip()
     context = str(body.get("context") or "").strip()
+    web_search = bool(body.get("web_search", False))
     if not prompt:
         raise HTTPException(status_code=400, detail="prompt required")
 
-    full_prompt = f"{context}\n\n{prompt}" if context else prompt
+    web_context = ""
+    if web_search:
+        try:
+            results, web_context = await web_search_with_content(prompt, max_results=6, fetch_content=True)
+            # Inject top results into the live intel feed (kept for 2 hours)
+            if results:
+                from services.fetchers._store import latest_data, _data_lock
+                new_items = results_to_news_items(prompt, results)
+                with _data_lock:
+                    existing_links = {i.get("link") for i in latest_data.get("web_intel", [])}
+                    to_add = [i for i in new_items if i["link"] not in existing_links]
+                    latest_data["web_intel"] = (to_add + latest_data.get("web_intel", []))[:50]
+            logger.info("Web search for '%s': %d results injected into intel feed", prompt, len(results))
+        except Exception as exc:
+            logger.warning("Web search failed: %s", exc)
+            web_context = ""
+
+    # Build final prompt
+    parts = []
+    if web_context:
+        parts.append(web_context)
+    if context:
+        parts.append(f"DASHBOARD CONTEXT:\n{context}")
+    parts.append(f"USER QUESTION: {prompt}")
+    full_prompt = "\n\n".join(parts)
+
     ollama_url = os.environ.get("OLLAMA_URL", "http://ollama:11434")
 
     async def generate():
+        # First yield a status line if web search was done
+        if web_context:
+            yield json_mod.dumps({"status": "web_search_complete"}) + "\n"
         try:
-            async with httpx.AsyncClient(timeout=120) as client:
+            async with httpx.AsyncClient(timeout=180) as client:
                 async with client.stream(
                     "POST",
                     f"{ollama_url}/api/generate",
@@ -8592,7 +8622,7 @@ async def ollama_query(request: Request):
                         "model": "mistral-nemo:12b",
                         "prompt": full_prompt,
                         "stream": True,
-                        "options": {"num_predict": 512},
+                        "options": {"num_predict": 1024},
                     },
                 ) as resp:
                     if resp.status_code != 200:
@@ -8607,6 +8637,14 @@ async def ollama_query(request: Request):
             yield json_mod.dumps({"error": str(exc)}) + "\n"
 
     return StreamingResponse(generate(), media_type="application/x-ndjson")
+
+
+@app.get("/api/web-intel")
+@limiter.limit("60/minute")
+async def get_web_intel(request: Request):
+    """Return web intel items injected by Ask Catto web searches."""
+    from services.fetchers._store import latest_data
+    return JSONResponse({"items": latest_data.get("web_intel", [])})
 
 
 # ---------------------------------------------------------------------------

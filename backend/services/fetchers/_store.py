@@ -70,6 +70,8 @@ class DashboardData(TypedDict, total=False):
     acaps_crises: List[Dict[str, Any]]
     # v8.0.0 — Watchlist vessel IDs for correlation engine
     watchlist_vessels: List[str]
+    # v8.1.0 — Web intel injected by Ask Catto web searches
+    web_intel: List[Dict[str, Any]]
 
 
 # In-memory store
@@ -122,6 +124,7 @@ latest_data: DashboardData = {
     "reliefweb_events": [],
     "acaps_crises": [],
     "watchlist_vessels": [],
+    "web_intel": [],
 }
 
 # Per-source freshness timestamps
