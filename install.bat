@@ -1,535 +1,237 @@
 @echo off
 setlocal enabledelayedexpansion
-title CATTO v8.0.0 — Installer
+title CATTO v8.0.0 -- Installer
 color 0A
+mode con: cols=100 lines=30
 
-:: ─────────────────────────────────────────────────────────────────────────────
-::  CATTO v8.0.0 — Windows Auto-Installer
+:: -----------------------------------------------------------------------------
+::  CATTO v8.0.0 -- Windows Auto-Installer
 ::  Requires: Windows 10 / 11, run as Administrator
-::  If anything fails, follow the on-screen manual steps and press Y to retry.
-:: ─────────────────────────────────────────────────────────────────────────────
+:: -----------------------------------------------------------------------------
+:: Pre-emptively disable QuickEdit in Registry (ensures new window inherits "No Pause")
+reg add "HKCU\Console" /v "QuickEdit" /t REG_DWORD /d 0 /f >nul 2>&1
 
-:: Prevent window from closing on any unexpected error
+:: Request Admin
 if "%1"=="ELEVATED" goto :main
 net session >nul 2>&1
 if errorlevel 1 (
     echo  Requesting administrator privileges...
-    powershell -Command "Start-Process cmd -ArgumentList '/c \"%~f0\" ELEVATED' -Verb RunAs -Wait"
-    goto :keepopen
+    powershell -Command "Start-Process conhost.exe -ArgumentList 'cmd.exe /c \"%~f0\" ELEVATED' -Verb RunAs"
+    exit /b
 )
 
 :main
+:: Disable QuickEdit Mode (prevents clicking in window from pausing execution)
+powershell -Command "$i = [System.IntPtr](-10); $k = Add-Type -MemberDefinition '[DllImport(\"kernel32.dll\")] public static extern IntPtr GetStdHandle(int n); [DllImport(\"kernel32.dll\")] public static extern bool GetConsoleMode(IntPtr h, out uint m); [DllImport(\"kernel32.dll\")] public static extern bool SetConsoleMode(IntPtr h, uint m);' -Name 'W32' -Namespace 'Console' -PassThru; $h = $k::GetStdHandle(-10); $m = [uint]0; $k::GetConsoleMode($h, [ref]$m); $k::SetConsoleMode($h, $m -band 0xFF3F);" >nul 2>&1
 cls
 echo.
 echo  =========================================================
-echo   ██████╗ █████╗ ████████╗████████╗ ██████╗
-echo  ██╔════╝██╔══██╗╚══██╔══╝╚══██╔══╝██╔═══██╗
-echo  ██║     ███████║   ██║      ██║   ██║   ██║
-echo  ██║     ██╔══██║   ██║      ██║   ██║   ██║
-echo  ╚██████╗██║  ██║   ██║      ██║   ╚██████╔╝
-echo   ╚═════╝╚═╝  ╚═╝   ╚═╝      ╚═╝    ╚═════╝
+:: Decoding the original Unicode logo via PowerShell (Safe from Batch parser errors)
+powershell -NoProfile -Command ^
+  "$b64 = \"IOKWiOKWiOKWiOKWiOKWiOKWiOKVlyDilojilojilojilojilojilZcg4paI4paI4paI4paI4paI4paI4paI4paI4pWX4paI4paI4paI4paI4paI4paI4paI4paI4pWXIOKWiOKWiOKWiOKWiOKWiOKWiOKVlyAK4paI4paI4pWU4pWQ4pWQ4pWQ4pWQ4pWd4paI4paI4pWU4pWQ4pWQ4paI4paI4pWX4pWa4pWQ4pWQ4paI4paI4pWU4pWQ4pWQ4pWd4pWa4pWQ4pWQ4paI4paI4pWU4pWQ4pWQ4pWd4paI4paI4pWU4pWQ4pWQ4pWQ4paI4paI4pWXCuKWiOKWiOKVkSAgICAg4paI4paI4paI4paI4paI4paI4paI4pWRICAg4paI4paI4pWRICAgICAg4paI4paI4pWRICAg4paI4paI4pWRICAg4paI4paI4pWRCuKWiOKWiOKVkSAgICAg4paI4paI4pWU4pWQ4pWQ4paI4paI4pWRICAg4paI4paI4pWRICAgICAg4paI4paI4pWRICAg4paI4paI4pWRICAg4paI4paI4pWRCuKVmuKWiOKWiOKWiOKWiOKWiOKWiOKVl+KWiOKWiOKVkSAg4paI4paI4pWRICAg4paI4paI4pWRICAgICAg4paI4paI4pWRICAg4pWa4paI4paI4paI4paI4paI4paI4pWU4pWdCiDilZrilZDilZDilZDilZDilZDilZ3ilZrilZDilZ0gIOKVmuKVkOKVnSAgIOKVmuKVkOKVnSAgICAgIOKVmuKVkOKVnSAgICDilZrilZDilZDilZDilZDilZDilZ0g\"; " ^
+  "$logo = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($b64)); " ^
+  "Write-Host $logo -ForegroundColor Green"
 echo  =========================================================
 echo   v8.0.0  Singapore OSINT Intelligence Dashboard
-echo   Ollama AI · Correlation Engine · Timeline · SEA Feeds
 echo  =========================================================
 echo.
+echo  [DEBUG] Press any key to start the installer...
+pause >nul
 
 set "CATTO_DIR=%~dp0"
 if "%CATTO_DIR:~-1%"=="\" set "CATTO_DIR=%CATTO_DIR:~0,-1%"
-echo  Install location: %CATTO_DIR%
-echo.
+echo  Location: %CATTO_DIR%
 
-set "ELECTRON_OK=0"
-set "OLLAMA_MODEL_OK=0"
-set "STEP_FAILED=0"
-
-:: ─────────────────────────────────────────────────────────────────────────────
+:: -----------------------------------------------------------------------------
 :step1
-echo  =========================================================
-echo   STEP 1 of 9 ^|  WSL (Windows Subsystem for Linux)
-echo  =========================================================
 echo.
+echo  [STEP 1/9] Checking WSL...
 wsl --status >nul 2>&1
-if errorlevel 1 (
-    echo  [!] WSL is not installed.
-    echo      Docker Desktop requires WSL 2 to run.
-    echo.
-    echo  Attempting automatic WSL install...
-    wsl --install
-    if errorlevel 1 (
-        echo.
-        echo  ┌─────────────────────────────────────────────────────┐
-        echo  │  MANUAL INSTALL REQUIRED — WSL                      │
-        echo  │                                                      │
-        echo  │  1. Open PowerShell as Administrator                 │
-        echo  │  2. Run:  wsl --install                              │
-        echo  │  3. Restart your PC when prompted                    │
-        echo  │  4. Run this installer again after restart           │
-        echo  └─────────────────────────────────────────────────────┘
-        echo.
-        echo  Press any key to exit. Re-run install.bat after restarting.
-        pause >nul
-        goto :keepopen
-    )
-    echo.
-    echo  ┌─────────────────────────────────────────────────────┐
-    echo  │  WSL installed. YOU MUST RESTART YOUR PC NOW.       │
-    echo  │  After restarting, run install.bat again.           │
-    echo  └─────────────────────────────────────────────────────┘
-    echo.
-    pause
-    goto :keepopen
-) else (
+if not errorlevel 1 (
     echo  [OK] WSL is installed.
+    goto :step1_done
 )
 
-:: ─────────────────────────────────────────────────────────────────────────────
+echo  [!] WSL is NOT installed.
+echo  Attempting automatic install...
+wsl --install
+if errorlevel 1 (
+    echo.
+    echo  +-----------------------------------------------------+
+    echo  [ MANUAL INSTALL REQUIRED - WSL ]
+    echo  1. Open PowerShell as Administrator
+    echo  2. Run: wsl --install
+    echo  3. Restart and run this script again.
+    echo  +-----------------------------------------------------+
+    pause
+    goto :keepopen
+)
+echo  [OK] WSL installed. You must RESTART your PC now.
+pause
+goto :keepopen
+
+:step1_done
+echo  [OK] Step 1 finished.
+
+:: -----------------------------------------------------------------------------
 :step2
 echo.
-echo  =========================================================
-echo   STEP 2 of 9 ^|  Docker Desktop
-echo  =========================================================
-echo.
+echo  [STEP 2/9] Checking Docker...
 where docker >nul 2>&1
-if errorlevel 1 (
-    echo  [!] Docker Desktop is not installed.
-    echo.
-    echo  ┌─────────────────────────────────────────────────────┐
-    echo  │  MANUAL INSTALL REQUIRED — Docker Desktop           │
-    echo  │                                                      │
-    echo  │  1. Download from: https://www.docker.com/products/ │
-    echo  │     docker-desktop/                                  │
-    echo  │  2. Run the installer (use all default settings)     │
-    echo  │  3. Start Docker Desktop and wait for the whale      │
-    echo  │     icon in the taskbar to stop animating            │
-    echo  │  4. Press Y here to retry                            │
-    echo  └─────────────────────────────────────────────────────┘
-    echo.
-    start "" "https://www.docker.com/products/docker-desktop/"
-    echo  Opening download page in your browser...
-    echo.
-    :docker_retry
-    set /p "RETRY=  Have you installed and started Docker Desktop? [Y/N]: "
-    if /i "!RETRY!"=="Y" (
-        where docker >nul 2>&1
-        if errorlevel 1 (
-            echo  [!] Docker still not found. Make sure installation is complete.
-            goto :docker_retry
-        )
-        docker info >nul 2>&1
-        if errorlevel 1 (
-            echo  [!] Docker found but not running. Please start Docker Desktop first.
-            goto :docker_retry
-        )
-        echo  [OK] Docker is now running.
-    ) else (
-        echo  Skipping Docker. Catto cannot run without Docker.
-        echo  Press any key to exit.
-        pause >nul
-        goto :keepopen
-    )
-) else (
-    docker info >nul 2>&1
-    if errorlevel 1 (
-        echo  [!] Docker is installed but not running.
-        echo.
-        echo  ┌─────────────────────────────────────────────────────┐
-        echo  │  Please start Docker Desktop:                        │
-        echo  │  1. Open Docker Desktop from the Start menu          │
-        echo  │  2. Wait for the whale icon to stop animating        │
-        echo  │  3. Press Y here to retry                            │
-        echo  └─────────────────────────────────────────────────────┘
-        echo.
-        :docker_start_retry
-        set /p "RETRY=  Is Docker Desktop running? [Y/N]: "
-        if /i "!RETRY!"=="Y" (
-            docker info >nul 2>&1
-            if errorlevel 1 (
-                echo  [!] Still not running. Please check Docker Desktop.
-                goto :docker_start_retry
-            )
-            echo  [OK] Docker daemon is running.
-        ) else (
-            echo  Cannot continue without Docker running.
-            pause >nul
-            goto :keepopen
-        )
-    ) else (
-        echo  [OK] Docker Desktop is running.
-    )
-)
+if errorlevel 1 goto :docker_miss
 
-:: ─────────────────────────────────────────────────────────────────────────────
+docker info >nul 2>&1
+if errorlevel 1 goto :docker_off
+
+echo  [OK] Docker is running.
+goto :step2_done
+
+:docker_miss
+echo  [!] Docker is NOT installed.
+echo  Opening download page...
+start "" "https://www.docker.com/products/docker-desktop/"
+echo.
+set /p "D_RETRY=  Have you installed Docker? [Y/N]: "
+if /i "!D_RETRY!"=="Y" goto :step2
+goto :keepopen
+
+:docker_off
+echo  [!] Docker is installed but NOT running.
+echo  Please start Docker Desktop and wait for it to be ready.
+echo.
+set /p "D_RUN=  Is Docker running now? [Y/N]: "
+if /i "!D_RUN!"=="Y" goto :step2
+goto :keepopen
+
+:step2_done
+echo  [OK] Step 2 finished.
+
+:: -----------------------------------------------------------------------------
 :step3
 echo.
-echo  =========================================================
-echo   STEP 3 of 9 ^|  Node.js (for Electron desktop app)
-echo  =========================================================
-echo.
+echo  [STEP 3/9] Checking Node.js...
 where node >nul 2>&1
-if errorlevel 1 (
-    echo  [!] Node.js is not installed.
-    echo.
-    echo  ┌─────────────────────────────────────────────────────┐
-    echo  │  MANUAL INSTALL REQUIRED — Node.js                  │
-    echo  │                                                      │
-    echo  │  1. Download LTS from: https://nodejs.org/          │
-    echo  │  2. Run the installer (use all default settings)     │
-    echo  │  3. Press Y here to retry, or N to skip             │
-    echo  │                                                      │
-    echo  │  NOTE: Without Node.js, the Electron desktop app    │
-    echo  │  won't install. You can still use Catto in your     │
-    echo  │  browser at http://localhost:3002                    │
-    echo  └─────────────────────────────────────────────────────┘
-    echo.
-    start "" "https://nodejs.org/en/download/"
-    echo  Opening download page in your browser...
-    echo.
-    set /p "SKIP_NODE=  Skip Node.js and continue without Electron? [Y/N]: "
-    if /i "!SKIP_NODE!"=="Y" (
-        echo  [SKIP] Continuing without Node.js — Electron will not be installed.
-        set "SKIP_ELECTRON=1"
-    ) else (
-        :node_retry
-        set /p "RETRY=  Have you installed Node.js? [Y/N]: "
-        if /i "!RETRY!"=="Y" (
-            where node >nul 2>&1
-            if errorlevel 1 (
-                echo  [!] Node.js still not found. Make sure installation is complete
-                echo      and open a new Command Prompt window, then run install.bat again.
-                goto :node_retry
-            )
-            echo  [OK] Node.js found.
-        ) else (
-            echo  [SKIP] Skipping Node.js — Electron will not be installed.
-            set "SKIP_ELECTRON=1"
-        )
-    )
-) else (
-    for /f "tokens=*" %%i in ('node --version 2^>nul') do set NODE_VER=%%i
-    echo  [OK] Node.js !NODE_VER! found.
+if not errorlevel 1 (
+    for /f "tokens=*" %%i in ('node --version') do set N_VER=%%i
+    echo  [OK] Node.js !N_VER! found.
+    goto :step3_done
 )
 
-:: ─────────────────────────────────────────────────────────────────────────────
+echo  [!] Node.js is NOT installed.
+echo  Opening download page...
+start "" "https://nodejs.org/"
+echo.
+set /p "N_SKIP=  Skip Node.js? (Electron won't work) [Y/N]: "
+if /i "!N_SKIP!"=="Y" (
+    set "SKIP_ELECTRON=1"
+    goto :step3_done
+)
+set /p "N_RETRY=  Is Node.js installed now? [Y/N]: "
+if /i "!N_RETRY!"=="Y" goto :step3
+goto :keepopen
+
+:step3_done
+echo  [OK] Step 3 finished.
+
+:: -----------------------------------------------------------------------------
 :step4
 echo.
-echo  =========================================================
-echo   STEP 4 of 9 ^|  Verifying Catto directory
-echo  =========================================================
-echo.
+echo  [STEP 4/9] Verifying Folder...
 cd /d "%CATTO_DIR%"
 if not exist "docker-compose.yml" (
-    echo  [ERROR] docker-compose.yml not found at: %CATTO_DIR%
-    echo.
-    echo  Make sure install.bat is in the Catto root folder
-    echo  (the folder that contains docker-compose.yml).
-    echo.
+    echo  [ERROR] docker-compose.yml not found in %CATTO_DIR%
     pause
     goto :keepopen
 )
-echo  [OK] Catto root folder verified.
+echo  [OK] Folder verified.
 
-:: ─────────────────────────────────────────────────────────────────────────────
+:: -----------------------------------------------------------------------------
 :step5
 echo.
-echo  =========================================================
-echo   STEP 5 of 9 ^|  Environment file (.env)
-echo  =========================================================
-echo.
+echo  [STEP 5/9] Setting up Environment...
 if exist ".env" (
-    echo  [OK] .env already exists — skipping.
-) else if exist ".env.example" (
-    copy ".env.example" ".env" >nul
-    echo  [OK] Created .env from .env.example
+    echo  [OK] .env exists.
 ) else (
-    echo  [WARNING] .env.example not found. Creating blank .env...
-    echo. > ".env"
+    copy ".env.example" ".env"
+    echo  [OK] Created .env from example.
 )
+echo  Opening .env for key entry (Optional)...
+set /p "ENV_ED=  Open .env now? [Y/N]: "
+if /i "!ENV_ED!"=="Y" start notepad .env
+echo  [OK] Step 5 finished.
+echo  Check your .env keys later for full functionality.
 
-echo.
-echo  =========================================================
-echo   API KEYS — fill in .env before or after installation
-echo  =========================================================
-echo.
-echo  REQUIRED (without these, core features won't work):
-echo.
-echo    LTA_ACCOUNT_KEY          → datamall.mytransport.sg
-echo    OPENSKY_CLIENT_ID        → opensky-network.org  (free)
-echo    OPENSKY_CLIENT_SECRET    → opensky-network.org  (free)
-echo    AIS_API_KEY              → aisstream.io         (free)
-echo    OCEANS_X_API_KEY         → mpa.gov.sg Oceans-X portal
-echo.
-echo  OPTIONAL (extra intelligence layers):
-echo.
-echo    OTX_API_KEY              → otx.alienvault.com
-echo    VIRUSTOTAL_API_KEY       → virustotal.com
-echo    ABUSEIPDB_API_KEY        → abuseipdb.com
-echo    SHODAN_API_KEY           → shodan.io
-echo    FINNHUB_API_KEY          → finnhub.io
-echo    TELEGRAM_API_ID          → my.telegram.org
-echo    TELEGRAM_API_HASH        → my.telegram.org
-echo    ACLED_EMAIL              → acleddata.com
-echo    ACLED_PASSWORD           → acleddata.com
-echo    GFW_API_TOKEN            → globalfishingwatch.org
-echo.
-echo  Edit .env now:   notepad "%CATTO_DIR%\.env"
-echo.
-set /p "OPEN_ENV=  Open .env in Notepad now to fill in keys? [Y/N]: "
-if /i "!OPEN_ENV!"=="Y" (
-    start notepad "%CATTO_DIR%\.env"
-    echo.
-    echo  Fill in your keys, save the file, then come back here.
-    pause
-)
-
-:: ─────────────────────────────────────────────────────────────────────────────
+:: -----------------------------------------------------------------------------
 :step6
 echo.
-echo  =========================================================
-echo   STEP 6 of 9 ^|  Building Docker containers
-echo   (First run downloads ~3 GB — may take 5-15 minutes)
-echo  =========================================================
-echo.
-
-:: Re-check Docker is still running before we try to build
-:pre_build_docker_check
-docker info >nul 2>&1
-if errorlevel 1 (
-    echo  [!] Docker is not running. Please start Docker Desktop.
-    echo.
-    echo  ┌─────────────────────────────────────────────────────┐
-    echo  │  1. Open Docker Desktop from the Start menu          │
-    echo  │  2. Wait for the whale icon to stop animating        │
-    echo  │  3. Press Y here once Docker is up                   │
-    echo  └─────────────────────────────────────────────────────┘
-    echo.
-    :build_wait_docker
-    set /p "DOCKER_UP=  Is Docker Desktop running now? [Y/N]: "
-    if /i "!DOCKER_UP!"=="Y" (
-        docker info >nul 2>&1
-        if errorlevel 1 (
-            echo  [!] Still not running. Please check Docker Desktop and try again.
-            goto :build_wait_docker
-        )
-        echo  [OK] Docker is running. Continuing build...
-    ) else (
-        echo  Cannot build without Docker running.
-        echo  Start Docker Desktop and run install.bat again.
-        pause >nul
-        goto :keepopen
-    )
-)
-
-:docker_build_retry
+echo  [STEP 6/9] Building Containers...
 docker compose up -d --build
 if errorlevel 1 (
-    echo.
-    echo  ┌─────────────────────────────────────────────────────┐
-    echo  │  [ERROR] Docker build failed.                        │
-    echo  │                                                      │
-    echo  │  Common fixes:                                       │
-    echo  │  1. Make sure Docker Desktop is fully running        │
-    echo  │     (whale icon not animating)                       │
-    echo  │  2. Check free disk space — need at least 10 GB      │
-    echo  │  3. Check your internet connection                    │
-    echo  │  4. Try manually in a Command Prompt:                │
-    echo  │       docker compose down                            │
-    echo  │       docker compose up -d --build                   │
-    echo  │  5. Check logs: docker compose logs                  │
-    echo  └─────────────────────────────────────────────────────┘
-    echo.
-    set /p "RETRY_BUILD=  Retry Docker build? [Y/N]: "
-    if /i "!RETRY_BUILD!"=="Y" goto :pre_build_docker_check
-    echo.
-    echo  [!] Docker build skipped. Catto will not run until containers are built.
-    echo      Run  docker compose up -d --build  manually when ready.
-    set "STEP_FAILED=1"
-) else (
-    echo  [OK] Containers built and started.
+    echo  [ERROR] Build failed. Check Docker logs.
+    pause
+    goto :keepopen
 )
+echo  [OK] Containers running.
 
-:: ─────────────────────────────────────────────────────────────────────────────
+:: -----------------------------------------------------------------------------
 :step7
 echo.
-echo  =========================================================
-echo   STEP 7 of 9 ^|  Pulling Ollama AI model (mistral-nemo:12b)
-echo   (~7 GB download — skip if you don't need on-device AI)
-echo  =========================================================
-echo.
-set /p "PULL_MODEL=  Pull Mistral-Nemo 12B AI model now? [Y/N]: "
-if /i "!PULL_MODEL!"=="Y" (
-    echo.
-    echo  Waiting for Ollama container to be ready...
-    timeout /t 5 >nul
-    :ollama_pull_retry
+echo  [STEP 7/9] Pulling AI model...
+set /p "AI_P=  Pull Mistral-Nemo AI? (takes 7GB) [Y/N]: "
+if /i "!AI_P!"=="Y" (
     docker exec catto-ollama ollama pull mistral-nemo:12b
-    if errorlevel 1 (
-        echo.
-        echo  ┌─────────────────────────────────────────────────────┐
-        echo  │  [!] Model pull failed.                              │
-        echo  │                                                      │
-        echo  │  Common fixes:                                       │
-        echo  │  1. Make sure catto-ollama container is running:    │
-        echo  │       docker ps ^| findstr ollama                    │
-        echo  │  2. Check internet connection (need ~7 GB free)     │
-        echo  │  3. Pull manually later:                             │
-        echo  │       docker exec catto-ollama ollama pull \        │
-        echo  │         mistral-nemo:12b                             │
-        echo  │  4. AI features will show "AI OFFLINE" until done   │
-        echo  └─────────────────────────────────────────────────────┘
-        echo.
-        set /p "RETRY_MODEL=  Retry model pull? [Y/N]: "
-        if /i "!RETRY_MODEL!"=="Y" goto :ollama_pull_retry
-        echo  [SKIP] Model pull skipped. Pull it later with:
-        echo         docker exec catto-ollama ollama pull mistral-nemo:12b
-    ) else (
-        echo  [OK] Mistral-Nemo 12B model ready.
-        set "OLLAMA_MODEL_OK=1"
-    )
-) else (
-    echo  [SKIP] Model pull skipped.
-    echo         Pull later with: docker exec catto-ollama ollama pull mistral-nemo:12b
+    if errorlevel 1 echo  [WARNING] AI pull failed.
 )
 
-:: ─────────────────────────────────────────────────────────────────────────────
+:: -----------------------------------------------------------------------------
 :step8
 echo.
-echo  =========================================================
-echo   STEP 8 of 9 ^|  Electron desktop app
-echo  =========================================================
+echo  [STEP 8/9] Electron Setup...
+if defined SKIP_ELECTRON goto :step8_skip
+if not exist "electron" goto :step8_skip
+
+cd electron
+echo  Installing Electron dependencies...
+call npm install
+cd ..
+:step8_skip
 echo.
-if defined SKIP_ELECTRON (
-    echo  [SKIP] Node.js not available — skipping Electron.
-    goto :electron_skip
-)
-if not exist "%CATTO_DIR%\electron\package.json" (
-    echo  [SKIP] electron\package.json not found — skipping.
-    goto :electron_skip
-)
 
-cd /d "%CATTO_DIR%\electron"
-echo  Installing Electron (~120 MB)...
-echo.
-:electron_install_retry
-npm install
-if errorlevel 1 (
-    echo.
-    echo  ┌─────────────────────────────────────────────────────┐
-    echo  │  [!] Electron npm install failed.                    │
-    echo  │                                                      │
-    echo  │  Manual fix — open a Command Prompt and run:         │
-    echo  │    cd "%CATTO_DIR%\electron"
-    echo  │    npm install                                       │
-    echo  │                                                      │
-    echo  │  If binary download fails specifically:              │
-    echo  │    node node_modules/electron/install.js             │
-    echo  │                                                      │
-    echo  │  FALLBACK: browser at http://localhost:3002 works    │
-    echo  │  fully without Electron.                             │
-    echo  └─────────────────────────────────────────────────────┘
-    echo.
-    set /p "RETRY_ELECTRON=  Retry Electron install? [Y/N]: "
-    if /i "!RETRY_ELECTRON!"=="Y" goto :electron_install_retry
-    set "ELECTRON_OK=0"
-) else (
-    if exist "%CATTO_DIR%\electron\node_modules\electron\dist\electron.exe" (
-        echo  [OK] Electron installed and verified.
-        set "ELECTRON_OK=1"
-    ) else if exist "%CATTO_DIR%\electron\node_modules\.bin\electron.cmd" (
-        echo  [OK] Electron installed and verified.
-        set "ELECTRON_OK=1"
-    ) else (
-        echo  [WARNING] npm install succeeded but Electron binary not found.
-        echo  Run manually:  node node_modules/electron/install.js
-        set "ELECTRON_OK=0"
-    )
-)
-
-cd /d "%CATTO_DIR%"
-:electron_skip
-
-:: ─────────────────────────────────────────────────────────────────────────────
+:: -----------------------------------------------------------------------------
 :step9
 echo.
-echo  =========================================================
-echo   STEP 9 of 9 ^|  Desktop shortcut
-echo  =========================================================
-echo.
-set "SHORTCUT_TARGET=%CATTO_DIR%\start_catto.bat"
-set "SHORTCUT_ICON=%CATTO_DIR%\electron\assets\icon.ico"
-set "SHORTCUT_PATH=%PUBLIC%\Desktop\Catto.lnk"
-if not exist "%PUBLIC%\Desktop" set "SHORTCUT_PATH=%USERPROFILE%\Desktop\Catto.lnk"
+echo  [STEP 9/9] Creating Shortcut...
+set "S_T=%CATTO_DIR%\start_catto.bat"
+:: Using PowerShell to get the REAL Desktop path (OneDrive compatible)
+for /f "usebackq tokens=*" %%d in (`powershell -NoProfile -Command "[Environment]::GetFolderPath('Desktop')"`) do set "D_P=%%d"
+set "S_P=%D_P%\Catto.lnk"
 
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$ws = New-Object -ComObject WScript.Shell; " ^
-  "$s = $ws.CreateShortcut('%SHORTCUT_PATH%'); " ^
-  "$s.TargetPath = '%SHORTCUT_TARGET%'; " ^
-  "$s.WorkingDirectory = '%CATTO_DIR%'; " ^
-  "$s.Description = 'Catto v8.0.0 - Singapore OSINT Intelligence Dashboard'; " ^
-  "if (Test-Path '%SHORTCUT_ICON%') { $s.IconLocation = '%SHORTCUT_ICON%' }; " ^
-  "$s.Save()" >nul 2>&1
+powershell -NoProfile -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut(\"%S_P%\"); $s.TargetPath = \"%S_T%\"; $s.WorkingDirectory = \"%CATTO_DIR%\"; $s.WindowStyle = 1; $s.Save()" >nul 2>&1
 
-if exist "%SHORTCUT_PATH%" (
-    echo  [OK] Desktop shortcut created: Catto.lnk
+if exist "%S_P%" (
+    echo  [OK] Desktop shortcut created at: %S_P%
 ) else (
-    echo  [INFO] Shortcut creation skipped — launch via start_catto.bat
+    echo  [INFO] Shortcut skipped or failed to create.
 )
 
-:: ─────────────────────────────────────────────────────────────────────────────
-::  DONE
-:: ─────────────────────────────────────────────────────────────────────────────
-echo.
+:: -----------------------------------------------------------------------------
+:done
+cls
+:: Decoding the original Unicode logo via PowerShell (Safe from Batch parser errors)
+powershell -NoProfile -Command ^
+  "$b64 = \"IOKWiOKWiOKWiOKWiOKWiOKWiOKVlyDilojilojilojilojilojilZcg4paI4paI4paI4paI4paI4paI4paI4paI4pWX4paI4paI4paI4paI4paI4paI4paI4paI4pWXIOKWiOKWiOKWiOKWiOKWiOKWiOKVlyAK4paI4paI4pWU4pWQ4pWQ4pWQ4pWQ4pWd4paI4paI4pWU4pWQ4pWQ4paI4paI4pWX4pWa4pWQ4pWQ4paI4paI4pWU4pWQ4pWQ4pWd4pWa4pWQ4pWQ4paI4paI4pWU4pWQ4pWQ4pWd4paI4paI4pWU4pWQ4pWQ4pWQ4paI4paI4pWXCuKWiOKWiOKVkSAgICAg4paI4paI4paI4paI4paI4paI4paI4pWRICAg4paI4paI4pWRICAgICAg4paI4paI4pWRICAg4paI4paI4pWRICAg4paI4paI4pWRCuKWiOKWiOKVkSAgICAg4paI4paI4pWU4pWQ4pWQ4paI4paI4pWRICAg4paI4paI4pWRICAgICAg4paI4paI4pWRICAg4paI4paI4pWRICAg4paI4paI4pWRCuKVmuKWiOKWiOKWiOKWiOKWiOKWiOKVl+KWiOKWiOKVkSAg4paI4paI4pWRICAg4paI4paI4pWRICAgICAg4paI4paI4pWRICAg4pWa4paI4paI4paI4paI4paI4paI4pWU4pWdCiDilZrilZDilZDilZDilZDilZDilZ3ilZrilZDilZ0gIOKVmuKVkOKVnSAgIOKVmuKVkOKVnSAgICAgIOKVmuKVkOKVnSAgICDilZrilZDilZDilZDilZDilZDilZ0g\"; " ^
+  "$logo = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($b64)); " ^
+  "Write-Host $logo -ForegroundColor Green"
 echo  =========================================================
-if "!STEP_FAILED!"=="0" (
-    echo   CATTO v8.0.0 IS READY
-) else (
-    echo   CATTO v8.0.0 — INSTALLED WITH WARNINGS (see above)
-)
+echo   INSTALLATION COMPLETE
 echo  =========================================================
+echo   Dashboard: http://localhost:3002
 echo.
-echo   Dashboard (browser):  http://localhost:3002
-if "!ELECTRON_OK!"=="1" (
-    echo   Desktop app:          Double-click Catto on your desktop
-    echo                         or run start_catto.bat
-) else (
-    echo   Desktop app:          Use browser at http://localhost:3002
-)
-echo.
-if "!OLLAMA_MODEL_OK!"=="1" (
-    echo   AI features:          Ready (Mistral-Nemo 12B loaded)
-) else (
-    echo   AI features:          Pull model when ready:
-    echo                         docker exec catto-ollama ollama pull mistral-nemo:12b
-)
-echo.
-echo  ┌──────────────────────────────────────────────────────┐
-echo  │  NEXT: Fill in API keys for full functionality       │
-echo  │                                                      │
-echo  │  Edit: %CATTO_DIR%\.env
-echo  │                                                      │
-echo  │  Minimum keys:                                       │
-echo  │    LTA_ACCOUNT_KEY     datamall.mytransport.sg       │
-echo  │    OPENSKY_CLIENT_ID   opensky-network.org           │
-echo  │    AIS_API_KEY         aisstream.io                  │
-echo  │    OCEANS_X_API_KEY    mpa.gov.sg                    │
-echo  │                                                      │
-echo  │  After editing .env, restart containers:             │
-echo  │    docker compose down ^&^& docker compose up -d     │
-echo  └──────────────────────────────────────────────────────┘
-echo.
-echo   Useful commands:
-echo     View logs:    docker compose logs -f
-echo     Restart:      docker compose down ^&^& docker compose up -d
-echo     Pull AI:      docker exec catto-ollama ollama pull mistral-nemo:12b
-echo.
-set /p "OPEN_NOW=  Open dashboard in browser now? [Y/N]: "
-if /i "!OPEN_NOW!"=="Y" start "" "http://localhost:3002"
-
-echo.
-echo  Installation complete. This window will stay open.
-echo  Press any key to close.
-echo.
+echo   Press any key to exit this window.
 
 :keepopen
 pause >nul
+:: Restore QuickEdit in Registry (Polite cleanup)
+reg add "HKCU\Console" /v "QuickEdit" /t REG_DWORD /d 1 /f >nul 2>&1
 endlocal
+exit
