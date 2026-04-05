@@ -1373,6 +1373,17 @@ async def lifespan(app: FastAPI):
         # immediately, keeping the lifespan handler non-blocking.
         run_staggered_startup()
 
+        # Snapshot scheduler — 15-min rolling timeline (Feature 3)
+        try:
+            _init_snapshot_db()
+            from apscheduler.schedulers.background import BackgroundScheduler as _BGSched
+            _snap_sched = _BGSched(daemon=True)
+            _snap_sched.add_job(_take_snapshot, "interval", minutes=15, id="snapshot")
+            _snap_sched.start()
+            logger.info("Snapshot scheduler started (15-min interval)")
+        except Exception as _e:
+            logger.warning("Snapshot scheduler failed to start: %s", _e)
+
     yield
     if not _MESH_ONLY:
         # Shutdown: Stop all background services
@@ -2816,6 +2827,7 @@ async def live_data_slow(
         "volcanoes": (d.get("volcanoes") or []) if active_layers.get("volcanoes", True) else [],
         "fishing_activity": (d.get("fishing_activity") or []) if active_layers.get("fishing_activity", True) else [],
         "correlations": (d.get("correlations") or []) if active_layers.get("correlations", True) else [],
+        "predictions": d.get("predictions") or [],
         "mpa_arrivals": d.get("mpa_arrivals") or [],
         "mpa_departures": d.get("mpa_departures") or [],
         "mpa_departure_declarations": d.get("mpa_departure_declarations") or [],
@@ -6748,6 +6760,58 @@ async def mpa_vessel_particulars(request: Request, callsign: str = Query(..., mi
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/correlations")
+@limiter.limit("60/minute")
+async def get_correlations(request: Request):
+    """Return current correlation alerts from the cross-layer engine."""
+    d = get_latest_data()
+    return {"correlations": d.get("correlations") or [], "count": len(d.get("correlations") or [])}
+
+
+@app.get("/api/predictions")
+@limiter.limit("60/minute")
+async def get_predictions(request: Request):
+    """Return current rule-based predictions from the correlation engine."""
+    d = get_latest_data()
+    return {"predictions": d.get("predictions") or [], "count": len(d.get("predictions") or [])}
+
+
+# ---------------------------------------------------------------------------
+# Regional feeds — Malaysia + SEA (Feature 4)
+# ---------------------------------------------------------------------------
+
+@app.get("/api/regional/weather")
+@limiter.limit("30/minute")
+async def get_regional_weather(request: Request):
+    """MetMalaysia weather station observations."""
+    d = get_latest_data()
+    return {"stations": d.get("regional_weather") or [], "source": "MetMalaysia"}
+
+
+@app.get("/api/regional/cwa")
+@limiter.limit("30/minute")
+async def get_cwa_alerts(request: Request):
+    """CWA Taiwan earthquake + typhoon alerts."""
+    d = get_latest_data()
+    return {"alerts": d.get("cwa_alerts") or [], "source": "CWA Taiwan"}
+
+
+@app.get("/api/regional/reliefweb")
+@limiter.limit("30/minute")
+async def get_reliefweb_events(request: Request):
+    """ReliefWeb humanitarian crisis data for SEA."""
+    d = get_latest_data()
+    return {"events": d.get("reliefweb_events") or [], "source": "ReliefWeb"}
+
+
+@app.get("/api/regional/acaps")
+@limiter.limit("30/minute")
+async def get_acaps_crises(request: Request):
+    """ACAPS crisis severity data for SEA."""
+    d = get_latest_data()
+    return {"crises": d.get("acaps_crises") or [], "source": "ACAPS"}
+
+
 @app.get("/api/health", response_model=HealthResponse)
 @limiter.limit("30/minute")
 async def health_check(request: Request):
@@ -8475,6 +8539,178 @@ async def api_set_privacy_profile(request: Request, body: PrivacyProfileUpdate):
         "wormhole_enabled": bool(data.get("enabled")),
         "requires_restart": False,
     }
+
+
+# ---------------------------------------------------------------------------
+# Ollama — on-demand local LLM (mistral-nemo:12b)
+# Streams NDJSON responses. Returns 503 if Ollama is unreachable so the
+# frontend can gracefully show "AI OFFLINE" without breaking anything.
+# ---------------------------------------------------------------------------
+
+@app.get("/api/ollama/status")
+@limiter.limit("30/minute")
+async def ollama_status(request: Request):
+    """Check if Ollama is reachable."""
+    import httpx
+    ollama_url = os.environ.get("OLLAMA_URL", "http://ollama:11434")
+    try:
+        async with httpx.AsyncClient(timeout=3) as client:
+            r = await client.get(f"{ollama_url}/api/tags")
+            if r.status_code == 200:
+                return {"online": True, "model": "mistral-nemo:12b"}
+    except Exception:
+        pass
+    return {"online": False}
+
+
+@app.post("/api/ollama/query")
+@limiter.limit("10/minute")
+async def ollama_query(request: Request):
+    """Stream a Mistral-Nemo response. Body: {prompt, context}."""
+    import httpx
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+
+    prompt = str(body.get("prompt") or "").strip()
+    context = str(body.get("context") or "").strip()
+    if not prompt:
+        raise HTTPException(status_code=400, detail="prompt required")
+
+    full_prompt = f"{context}\n\n{prompt}" if context else prompt
+    ollama_url = os.environ.get("OLLAMA_URL", "http://ollama:11434")
+
+    async def generate():
+        try:
+            async with httpx.AsyncClient(timeout=120) as client:
+                async with client.stream(
+                    "POST",
+                    f"{ollama_url}/api/generate",
+                    json={
+                        "model": "mistral-nemo:12b",
+                        "prompt": full_prompt,
+                        "stream": True,
+                        "options": {"num_predict": 512},
+                    },
+                ) as resp:
+                    if resp.status_code != 200:
+                        yield json_mod.dumps({"error": f"Ollama returned HTTP {resp.status_code}"}) + "\n"
+                        return
+                    async for line in resp.aiter_lines():
+                        if line:
+                            yield line + "\n"
+        except httpx.ConnectError:
+            yield json_mod.dumps({"error": "ollama_offline"}) + "\n"
+        except Exception as exc:
+            yield json_mod.dumps({"error": str(exc)}) + "\n"
+
+    return StreamingResponse(generate(), media_type="application/x-ndjson")
+
+
+# ---------------------------------------------------------------------------
+# Snapshot / Timeline — 15-min rolling 24-hour history in SQLite
+# ---------------------------------------------------------------------------
+import sqlite3
+import gzip
+import zlib
+
+_SNAPSHOT_DB_PATH = os.path.join(os.path.dirname(__file__), "data", "snapshots.db")
+_snapshot_db_lock = threading.Lock()
+
+
+def _init_snapshot_db():
+    with _snapshot_db_lock:
+        conn = sqlite3.connect(_SNAPSHOT_DB_PATH)
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS snapshots (
+                ts TEXT PRIMARY KEY,
+                data BLOB NOT NULL
+            )"""
+        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_ts ON snapshots(ts)")
+        conn.commit()
+        conn.close()
+
+
+def _take_snapshot():
+    """Capture current feed state and persist to SQLite. Called every 15 min."""
+    from services.fetchers._store import latest_data as ld
+    _init_snapshot_db()
+    d = get_latest_data()
+    # Only snapshot the fields we care about for timeline playback
+    snap = {
+        "ts": datetime.utcnow().isoformat(),
+        "ships": d.get("ships") or [],
+        "commercial_flights": d.get("commercial_flights") or [],
+        "military_flights": d.get("military_flights") or [],
+        "gdelt": d.get("gdelt") or [],
+        "cisa_kev": d.get("cisa_kev") or [],
+        "correlations": d.get("correlations") or [],
+        "piracy_incidents": d.get("piracy_incidents") or [],
+        "earthquakes": d.get("earthquakes") or [],
+        "firms_fires": (d.get("firms_fires") or [])[:500],  # cap fires for size
+        "news": (d.get("news") or [])[:50],
+    }
+    payload = zlib.compress(json_mod.dumps(snap).encode(), level=6)
+    ts_key = snap["ts"]
+
+    with _snapshot_db_lock:
+        conn = sqlite3.connect(_SNAPSHOT_DB_PATH)
+        try:
+            conn.execute(
+                "INSERT OR REPLACE INTO snapshots (ts, data) VALUES (?, ?)",
+                (ts_key, payload),
+            )
+            # Prune to last 24 hours (96 × 15-min snapshots)
+            conn.execute(
+                """DELETE FROM snapshots WHERE ts NOT IN (
+                    SELECT ts FROM snapshots ORDER BY ts DESC LIMIT 96
+                )"""
+            )
+            conn.commit()
+        finally:
+            conn.close()
+    logger.info("Snapshot saved at %s", ts_key)
+
+
+@app.get("/api/snapshots")
+@limiter.limit("30/minute")
+async def list_snapshots(request: Request):
+    """Return list of available snapshot timestamps (newest first)."""
+    _init_snapshot_db()
+    with _snapshot_db_lock:
+        conn = sqlite3.connect(_SNAPSHOT_DB_PATH)
+        try:
+            rows = conn.execute(
+                "SELECT ts FROM snapshots ORDER BY ts DESC"
+            ).fetchall()
+        finally:
+            conn.close()
+    return {"snapshots": [r[0] for r in rows], "count": len(rows)}
+
+
+@app.get("/api/snapshots/{timestamp}")
+@limiter.limit("60/minute")
+async def get_snapshot(request: Request, timestamp: str):
+    """Return full feed state for a given snapshot timestamp."""
+    _init_snapshot_db()
+    with _snapshot_db_lock:
+        conn = sqlite3.connect(_SNAPSHOT_DB_PATH)
+        try:
+            row = conn.execute(
+                "SELECT data FROM snapshots WHERE ts = ?", (timestamp,)
+            ).fetchone()
+        finally:
+            conn.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="Snapshot not found")
+    try:
+        data = json_mod.loads(zlib.decompress(row[0]))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Decompression failed: {exc}")
+    return data
 
 
 # ---------------------------------------------------------------------------

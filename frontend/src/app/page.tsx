@@ -10,7 +10,7 @@ import NewsFeed from '@/components/NewsFeed';
 import MarketsPanel from '@/components/MarketsPanel';
 import FilterPanel from '@/components/FilterPanel';
 import FindLocateBar from '@/components/FindLocateBar';
-import TopRightControls from '@/components/TopRightControls';
+import TopBar from '@/components/TopBar';
 import SettingsPanel from '@/components/SettingsPanel';
 import MapLegend from '@/components/MapLegend';
 import ScaleBar from '@/components/ScaleBar';
@@ -26,10 +26,13 @@ import BreakingEventPopup from '@/components/BreakingEventPopup';
 import GlobalTicker from '@/components/GlobalTicker';
 import ToastNotifications from '@/components/ToastNotifications';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import SgtClockWidget from '@/components/SgtClockWidget';
-import IOCLookupPanel from '@/components/IOCLookupPanel';
-import CveLookupPanel from '@/components/CveLookupPanel';
+
+import ThreatIntelPanel from '@/components/ThreatIntelPanel';
+import CorrelationPanel from '@/components/CorrelationPanel';
 import CattoIntelPanel from '@/components/CattoIntelPanel';
+import TimelineScrubber from '@/components/TimelineScrubber';
+import EscalationPopup, { useEscalationMonitor, markSuppressed, setDnd } from '@/components/EscalationPopup';
+import type { EscalationEvent } from '@/components/EscalationPopup';
 import CrisisTracker from '@/components/CrisisTracker';
 import type { CrisisInput } from '@/components/CrisisTracker';
 import OnboardingModal, { useOnboarding } from '@/components/OnboardingModal';
@@ -439,6 +442,11 @@ export default function Dashboard() {
     global_incidents: true,
     day_night: true,
     correlations: true,
+    // v8.0.0 — Regional feeds (Malaysia + SEA) — ON by default
+    regional_weather: true,
+    cwa_alerts: true,
+    reliefweb_events: true,
+    acaps_crises: true,
   });
   const [shodanResults, setShodanResults] = useState<ShodanSearchMatch[]>([]);
   const [, setShodanQueryLabel] = useState('');
@@ -600,6 +608,17 @@ export default function Dashboard() {
   const [, setEavesdropLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [, setCameraCenter] = useState<{ lat: number; lng: number } | null>(null);
 
+  // Timeline / Snapshot state (Feature 3)
+  const [isHistorical, setIsHistorical] = useState(false);
+  const [historicalData, setHistoricalData] = useState<Record<string, unknown> | null>(null);
+
+  // Escalation popup queue (Feature 6)
+  const [escalationQueue, setEscalationQueue] = useState<EscalationEvent[]>([]);
+  const correlationsForEscalation = useDataKey('correlations') as Array<{ type: string; severity: string; lat: number | null; lng: number | null; drivers: string[]; score: number }> || [];
+  useEscalationMonitor(correlationsForEscalation, useCallback((e: EscalationEvent) => {
+    setEscalationQueue((q) => [...q, e]);
+  }, []));
+
   // Onboarding & connection status
   const { showOnboarding, setShowOnboarding } = useOnboarding();
   const { showChangelog, setShowChangelog } = useChangelog();
@@ -645,10 +664,11 @@ export default function Dashboard() {
           />
         </ErrorBoundary>
 
-        {/* SGT / UTC CLOCK — always visible over the map */}
-        <div className="absolute bottom-9 left-6 z-[200] pointer-events-none hud-zone">
-          <SgtClockWidget />
-        </div>
+        {/* TOP BAR — logo, clock, status, controls */}
+        <TopBar
+          overallStatus={overallStatus}
+          onSettingsClick={() => setSettingsOpen(true)}
+        />
 
         {/* FULLSCREEN HINT */}
         {mapFullscreen && (
@@ -659,37 +679,10 @@ export default function Dashboard() {
 
         {uiVisible && !mapFullscreen && (
           <>
-            {/* WORLDVIEW HEADER */}
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1 }}
-              className="absolute top-6 left-6 z-[200] pointer-events-none flex items-center gap-4 hud-zone"
-            >
-              <div className="w-8 h-8 flex items-center justify-center">
-                {/* Target Reticle Icon */}
-                <div className="w-6 h-6 rounded-full border border-cyan-500 relative flex items-center justify-center">
-                  <div className="w-4 h-4 rounded-full bg-cyan-500/30"></div>
-                  <div className="absolute top-[-2px] bottom-[-2px] w-[1px] bg-cyan-500"></div>
-                  <div className="absolute left-[-2px] right-[-2px] h-[1px] bg-cyan-500"></div>
-                </div>
-              </div>
-              <div className="flex flex-col">
-                <h1
-                  className="text-2xl font-bold tracking-[0.4em] text-[var(--text-heading)] flex items-center gap-3"
-                >
-                  C A T T O
-                </h1>
-                <span className="text-[9px] text-[var(--text-muted)] font-mono tracking-[0.3em] mt-1 ml-1">
-                  GLOBAL THREAT INTERCEPT
-                </span>
-              </div>
-            </motion.div>
-
             {/* LEFT HUD CONTAINER — full screen height, single scroll unit */}
             <motion.div
-              className="absolute left-6 top-0 bottom-0 w-80 flex flex-col gap-3 z-[200] pointer-events-auto overflow-y-auto styled-scrollbar px-2 pt-[90px] pb-10 hud-zone"
-              animate={{ x: leftOpen ? 0 : -360 }}
+              className="absolute left-6 top-0 bottom-0 w-[240px] flex flex-col gap-3 z-[200] pointer-events-auto overflow-y-auto styled-scrollbar px-2 pt-12 pb-10 hud-zone"
+              animate={{ x: leftOpen ? 0 : -280 }}
               transition={{ type: 'spring', damping: 30, stiffness: 250 }}
             >
               {/* 1. DATA LAYERS */}
@@ -723,10 +716,12 @@ export default function Dashboard() {
                 </ErrorBoundary>
               </div>
 
-              {/* 2. SG PORT / WX */}
+              {/* 2. CORRELATION + PREDICTIONS */}
               <div className="flex-shrink-0">
-                <ErrorBoundary name="SingaporeWeatherPanel">
-                  <SingaporeWeatherPanel />
+                <ErrorBoundary name="CorrelationPanel">
+                  <CorrelationPanel
+                    onFlyTo={(lat, lng) => setFlyToLocation({ lat, lng, ts: Date.now() })}
+                  />
                 </ErrorBoundary>
               </div>
 
@@ -740,14 +735,7 @@ export default function Dashboard() {
                 </ErrorBoundary>
               </div>
 
-              {/* 4. FEED HEALTH */}
-              <div className="flex-shrink-0">
-                <ErrorBoundary name="FeedHealthPanel">
-                  <FeedHealthPanel />
-                </ErrorBoundary>
-              </div>
-
-              {/* 5. WATCHLIST */}
+              {/* 4. WATCHLIST */}
               <div className="flex-shrink-0">
                 <ErrorBoundary name="WatchlistPanel">
                   <WatchlistPanel
@@ -759,27 +747,19 @@ export default function Dashboard() {
                 </ErrorBoundary>
               </div>
 
-              {/* 6. IOC LOOKUP */}
+              {/* 5. THREAT INTEL — IOC + CVE */}
               <div className="flex-shrink-0">
-                <ErrorBoundary name="IOCLookupPanel">
-                  <IOCLookupPanel />
+                <ErrorBoundary name="ThreatIntelPanel">
+                  <ThreatIntelPanel />
                 </ErrorBoundary>
               </div>
-
-              {/* 7. CVE SEARCH */}
-              <div className="flex-shrink-0">
-                <ErrorBoundary name="CveLookupPanel">
-                  <CveLookupPanel />
-                </ErrorBoundary>
-              </div>
-
 
             </motion.div>
 
             {/* LEFT SIDEBAR TOGGLE TAB — aligns with Data Layers section */}
             <motion.div
               className="absolute left-0 top-[12.5rem] z-[201] pointer-events-auto hud-zone"
-              animate={{ x: leftOpen ? 344 : 0 }}
+              animate={{ x: leftOpen ? 264 : 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 250 }}
             >
               <button
@@ -799,7 +779,7 @@ export default function Dashboard() {
             {/* RIGHT SIDEBAR TOGGLE TAB — aligns with Oracle Predictions section */}
             <motion.div
               className="absolute right-0 top-[12.5rem] z-[201] pointer-events-auto hud-zone"
-              animate={{ x: rightOpen ? -344 : 0 }}
+              animate={{ x: rightOpen ? -364 : 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 250 }}
             >
               <button
@@ -818,11 +798,16 @@ export default function Dashboard() {
 
             {/* RIGHT HUD CONTAINER — slides off right edge when hidden */}
             <motion.div
-              className="absolute right-6 top-[90px] bottom-9 w-80 flex flex-col gap-4 z-[200] pointer-events-auto overflow-y-auto styled-scrollbar pr-2 pl-2 hud-zone"
-              animate={{ x: rightOpen ? 0 : 360 }}
+              className="absolute right-6 top-12 bottom-9 w-[340px] flex flex-col gap-4 z-[200] pointer-events-auto overflow-y-auto styled-scrollbar pr-2 pl-2 hud-zone"
+              animate={{ x: rightOpen ? 0 : 380 }}
               transition={{ type: 'spring', damping: 30, stiffness: 250 }}
             >
-              <TopRightControls />
+              {/* FEED HEALTH — moved from left sidebar */}
+              <div className="flex-shrink-0">
+                <ErrorBoundary name="FeedHealthPanel">
+                  <FeedHealthPanel />
+                </ErrorBoundary>
+              </div>
 
               {/* FIND / LOCATE */}
               <div className="flex-shrink-0">
@@ -880,6 +865,19 @@ export default function Dashboard() {
                 transition={{ delay: 1, duration: 1 }}
                 className="absolute bottom-9 left-1/2 -translate-x-1/2 z-[200] pointer-events-auto flex flex-col items-center gap-2 hud-zone"
               >
+                {/* TIMELINE SCRUBBER — 24h snapshot history */}
+                <TimelineScrubber
+                  isHistorical={isHistorical}
+                  onSnapshot={(data) => {
+                    setHistoricalData(data);
+                    setIsHistorical(true);
+                  }}
+                  onLiveMode={() => {
+                    setIsHistorical(false);
+                    setHistoricalData(null);
+                  }}
+                />
+
                 {/* LOCATE BAR — search by coordinates or place name */}
                 <LocateBar
                   onLocate={(lat, lng) => setFlyToLocation({ lat, lng, ts: Date.now() })}
@@ -946,6 +944,27 @@ export default function Dashboard() {
           </>
         )}
 
+        {/* ESCALATION POPUP (Feature 6) — one at a time, queued */}
+        {escalationQueue.length > 0 && (
+          <EscalationPopup
+            event={escalationQueue[0]}
+            onEscalate={(lat, lng) => {
+              setFlyToLocation({ lat, lng, ts: Date.now() });
+              markSuppressed(escalationQueue[0].type, lat, lng);
+              setEscalationQueue((q) => q.slice(1));
+            }}
+            onDismiss={(id) => {
+              const e = escalationQueue.find((ev) => ev.id === id);
+              if (e) markSuppressed(e.type, e.lat, e.lng);
+              setEscalationQueue((q) => q.filter((ev) => ev.id !== id));
+            }}
+            onDnd={() => {
+              setDnd();
+              setEscalationQueue([]);
+            }}
+          />
+        )}
+
         {/* RESTORE UI BUTTON (If Hidden) */}
         {!uiVisible && (
           <button
@@ -956,9 +975,18 @@ export default function Dashboard() {
           </button>
         )}
 
+        {/* SG PORT / WX — floating bottom-left widget */}
+        {uiVisible && !mapFullscreen && (
+          <div className="absolute bottom-9 left-4 z-[200] pointer-events-auto hud-zone">
+            <ErrorBoundary name="SingaporeWeatherPanel">
+              <SingaporeWeatherPanel />
+            </ErrorBoundary>
+          </div>
+        )}
+
         {/* DYNAMIC SCALE BAR — hidden when fullscreen overlays or locate bar are open */}
         {!(selectedEntity?.type === 'region_dossier' && regionDossier?.sentinel2) && selectedEntity?.type !== 'cctv' && selectedEntity?.type !== 'news' && !locateBarOpen && (
-        <div className="absolute bottom-[7rem] left-[23rem] z-[201] pointer-events-auto">
+        <div className="absolute bottom-[7rem] left-[17rem] z-[201] pointer-events-auto">
           <ScaleBar
             zoom={mapView.zoom}
             latitude={mapView.latitude}

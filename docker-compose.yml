@@ -27,6 +27,8 @@ services:
       - MESH_RELAY_PEERS=${MESH_RELAY_PEERS:-}
       # Shared transport auth for mesh peer push — set MESH_PEER_PUSH_SECRET in .env to enable.
       - MESH_PEER_PUSH_SECRET=${MESH_PEER_PUSH_SECRET:-}
+      # Ollama local LLM — model loaded on-demand, unloads after 5 min idle
+      - OLLAMA_URL=${OLLAMA_URL:-http://ollama:11434}
     volumes:
       - backend_data:/app/data
     restart: unless-stopped
@@ -80,5 +82,26 @@ services:
           memory: 2G
           cpus: '1'
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: catto-ollama
+    ports:
+      - "${BIND:-127.0.0.1}:11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_KEEP_ALIVE=5m
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+        limits:
+          memory: 20G
+
 volumes:
   backend_data:
+  ollama_data:

@@ -1,4 +1,4 @@
-# CATTO v7.0.0
+# CATTO v8.0.0
 
 **Singapore-focused OSINT intelligence dashboard for security analysts and SOC operators.**
 
@@ -38,7 +38,7 @@ It is not a consumer app. It is an analyst workstation for a map.
 | **Singapore** | LTA traffic, MPA vessels, CCTV mesh, weather, SCDF, SGSecure, bus stops, NEA PSI |
 | **Cyber** | CISA KEV, ransomware IOCs, Feodo C2, OTX pulses, Shodan, internet outages, data centres, SDR/SIGINT |
 | **Conflict** | Military flights, GPS jamming, tracked aircraft (POTUS alert), military bases, Ukraine, GDELT, UCDP, ACLED |
-| **World** | Commercial/private flights (Asia-Pacific default), AIS vessels, satellites, fires, earthquakes, weather, piracy |
+| **World** | Commercial/private flights (Asia-Pacific default), AIS vessels, satellites, fires, earthquakes, weather, piracy, Malaysia weather, CWA Taiwan alerts, ReliefWeb SEA crises, ACAPS severity |
 
 ---
 
@@ -112,6 +112,9 @@ It is not a consumer app. It is an analyst workstation for a map.
 - **Watchlist** — track specific vessels, aircraft, and entities with gold ring highlight
 - **Crisis tracker** — structured incident tracking with timeline
 - **Morning briefing** — auto-generated intelligence summary on load
+- **Ollama AI (v8.0)** — on-device Mistral-Nemo 12B; ANALYSE (map popup), DIGEST (Telegram), BRIEF (news), EXPLAIN (correlations), Ask Catto (free text); no cloud, no API key, graceful "AI OFFLINE" fallback
+- **Timeline scrubber (v8.0)** — 24h snapshot history (SQLite, every 15 min); scrubber bar above locate input; LIVE button snaps back to real-time
+- **Smart escalation popups (v8.0)** — HIGH-confidence correlation triggers non-dismissible 10-second popup; ESCALATE centers map, DISMISS+30min suppression, DND mode 1hr; Ollama assessment after 15s
 
 ### UI & Performance
 - **Global situation indicator** — per-region status light driven by live signal spikes: green (no incident / low activity), yellow (heightened alert), red (significant activity across multiple signals)
@@ -135,7 +138,7 @@ It is not a consumer app. It is an analyst workstation for a map.
 
 ```
 ╔══════════════════════════════════════════════════════════════════════╗
-║                        CATTO v7.0.0                                  ║
+║                        CATTO v8.0.0                                  ║
 ╠══════════════════════════════════════════════════════════════════════╣
 ║                                                                      ║
 ║  ┌─────────────────────┐        ┌──────────────────────────────┐    ║
@@ -225,6 +228,11 @@ Data flow:
 | APRS-IS | Amateur radio positions | None (public) |
 | Global Fishing Watch | Fishing activity events | `GFW_API_TOKEN` |
 | Telegram MTProto | Conflict channel monitor | `TELEGRAM_API_ID/HASH` |
+| Ollama (v8.0) | On-device Mistral-Nemo 12B AI | None (self-hosted Docker) |
+| MetMalaysia (v8.0) | Malaysia weather stations | None (public) |
+| CWA Taiwan (v8.0) | Taiwan earthquake + typhoon alerts | None (public) |
+| ReliefWeb (v8.0) | Humanitarian crises — SEA | None (public) |
+| ACAPS (v8.0) | Crisis severity — SEA | None (public) |
 | NASA GIBS | MODIS daily imagery | None (public) |
 | Sentinel Hub | Copernicus S2 imagery | GEE service account key |
 | Esri | World Imagery basemap | None (public) |
@@ -453,6 +461,20 @@ docker compose up -d --build
 
 ## Changelog
 
+### v8.0.0
+- **Ollama on-device AI** — Mistral-Nemo 12B served via Docker Ollama service; model loaded on-demand, VRAM freed after 5 min idle (`OLLAMA_KEEP_ALIVE=5m`)
+- **AI integration points** — ANALYSE (map right-click), DIGEST (Telegram panel), BRIEF (news header), EXPLAIN (each correlation row), Ask Catto (free-text sidebar input); all stream responses
+- **Graceful AI offline** — if Ollama unreachable, all AI buttons show "AI OFFLINE" — nothing breaks
+- **Correlation engine v2** — 10 detectors: vessel 50km haversine piracy, GDELT+mil 200km escalation, Telegram signal amplifier, CISA KEV 24h spike, watchlist breach, breaking signal convergence, domestic cyber threat, RF anomaly, military buildup, maritime threat
+- **Timeline scrubber** — SQLite `snapshots.db` stores all feed state every 15 min; 96 snapshots = 24h of history; scrub bar above locate input; LIVE button returns to real-time
+- **Smart escalation popups** — HIGH-confidence correlation triggers non-dismissible 10-second popup with ESCALATE / DISMISS; 30-min suppression per event type+region; DND mode 1hr; Ollama assessment appended after 15s (rule-based fallback if offline)
+- **MetMalaysia weather** — open data weather station observations for Malaysia (no key)
+- **CWA Taiwan alerts** — earthquake and typhoon alerts from `api.cwa.gov.tw` (no key)
+- **ReliefWeb** — humanitarian crisis data for Southeast Asia (free API)
+- **ACAPS crisis severity** — SEA-filtered crisis severity index (free)
+- **4 new World pillar toggles** — regional_weather, cwa_alerts, reliefweb_events, acaps_crises; all ON by default
+- **Version bump** — 7.2.1 → 8.0.0
+
 ### v7.0.0
 - **deck.gl GPU layer migration** — 6 layers migrated from MapLibre GL to deck.gl for GPU-accelerated rendering:
   - GDELT conflict markers → deck.gl ScatterplotLayer (global, no viewport cull)
@@ -584,7 +606,7 @@ Built and maintained by **cattoosint**.
 
 Based on **shadow--broker** by [bigbodycobain](https://gitlab.com/bigbodycobain/Shadowbroker) — an independent open-source OSINT situational awareness project. Not affiliated with the threat actor group of the same name.
 
-Data provided by: LTA DataMall, MPA Singapore, OpenSky Network, adsb.lol, ADS-B Exchange, AIS Stream, CelesTrak, NASA FIRMS, USGS, NOAA/NWS, GPSJam, GDELT Project, UCDP, ACLED, ICC-CCS/IMB, DeepStateMap, Ukraine Alert API, CISA, AlienVault OTX, Feodo Tracker, ransomware.live, Shodan, VirusTotal, AbuseIPDB, IODA, RIPE Atlas, data.gov.sg, KiwiSDR, PSK Reporter, SatNOGS, TinyGS, Global Fishing Watch, Telegram, NASA GIBS, Sentinel Hub / Copernicus, Esri, CARTO.
+Data provided by: LTA DataMall, MPA Singapore, OpenSky Network, adsb.lol, ADS-B Exchange, AIS Stream, CelesTrak, NASA FIRMS, USGS, NOAA/NWS, GPSJam, GDELT Project, UCDP, ACLED, ICC-CCS/IMB, DeepStateMap, Ukraine Alert API, CISA, AlienVault OTX, Feodo Tracker, ransomware.live, Shodan, VirusTotal, AbuseIPDB, IODA, RIPE Atlas, data.gov.sg, KiwiSDR, PSK Reporter, SatNOGS, TinyGS, Global Fishing Watch, Telegram, NASA GIBS, Sentinel Hub / Copernicus, Esri, CARTO, MetMalaysia, CWA Taiwan, ReliefWeb / UN OCHA, ACAPS.
 
 Open-source libraries: Next.js, React, MapLibre GL, react-map-gl, deck.gl, FastAPI, uvicorn, Tailwind CSS, Framer Motion, Electron, Telethon, Turf.js, Satellite.js.
 

@@ -39,6 +39,7 @@ import {
   Search,
 } from 'lucide-react';
 import OsintFeedsPanel from './OsintFeedsPanel';
+import { OllamaQueryInput } from './OllamaButton';
 import { API_BASE } from '@/lib/api';
 import { onTileLoadingChange, resetTileLoading } from '@/lib/sentinelHub';
 import packageJson from '../../package.json';
@@ -109,6 +110,10 @@ const FRESHNESS_MAP: Record<string, string> = {
   piracy_incidents: 'piracy_incidents',
   shodan_overlay: '',
   correlations: 'correlations',
+  regional_weather: 'regional_weather',
+  cwa_alerts: 'cwa_alerts',
+  reliefweb_events: 'reliefweb_events',
+  acaps_crises: 'acaps_crises',
   scdf_incidents: '',
   sgsecure_alerts: '',
   road_incidents: '',
@@ -1200,6 +1205,35 @@ const WorldviewLeftPanel = React.memo(function WorldviewLeftPanel({
           count: data?.kiwisdr?.length || 0,
           icon: Radio,
         },
+        // ── MALAYSIA + SEA REGIONAL FEEDS (v8.0.0) ──────────────────────────
+        {
+          id: 'regional_weather',
+          name: 'Malaysia Weather (MetMalaysia)',
+          source: 'MetMalaysia Open Data · MY',
+          count: (data as Record<string, unknown[]>)?.regional_weather?.length || 0,
+          icon: Wind,
+        },
+        {
+          id: 'cwa_alerts',
+          name: 'Taiwan Earthquakes + Typhoons',
+          source: 'CWA Taiwan · api.cwa.gov.tw',
+          count: (data as Record<string, unknown[]>)?.cwa_alerts?.length || 0,
+          icon: AlertTriangle,
+        },
+        {
+          id: 'reliefweb_events',
+          name: 'Humanitarian Crises (SEA)',
+          source: 'ReliefWeb · UN OCHA',
+          count: (data as Record<string, unknown[]>)?.reliefweb_events?.length || 0,
+          icon: Globe,
+        },
+        {
+          id: 'acaps_crises',
+          name: 'ACAPS Crisis Severity',
+          source: 'ACAPS · acaps.org',
+          count: (data as Record<string, unknown[]>)?.acaps_crises?.length || 0,
+          icon: Activity,
+        },
       ],
     },
   ];
@@ -1811,6 +1845,7 @@ const WorldviewLeftPanel = React.memo(function WorldviewLeftPanel({
                       {section.label === 'OSINT FEEDS' && expanded && (
                         <OsintFeedsPanel
                           liveuamap={(data as import('@/types/dashboard').DashboardData).liveuamap}
+                          telegramPosts={(data as any).telegram_posts || []}
                         />
                       )}
                     </div>
@@ -1822,6 +1857,12 @@ const WorldviewLeftPanel = React.memo(function WorldviewLeftPanel({
           )}
         </AnimatePresence>
       </div>
+
+      {/* ── Ask Catto AI query input ──────────────────────────────────── */}
+      <OllamaQueryInput
+        context={`Current time: ${new Date().toISOString()}. You are assisting an OSINT analyst monitoring the Southeast Asia region. Answer questions about current map data, threat levels, and geopolitical events concisely.`}
+        placeholder="Ask about current map data..."
+      />
     </motion.div>
   );
 });

@@ -15,47 +15,49 @@ import {
   Radar,
 } from 'lucide-react';
 
-const CURRENT_VERSION = '7.0.0';
+const CURRENT_VERSION = '8.0.0';
 const STORAGE_KEY = `catto_changelog_v${CURRENT_VERSION}`;
-const RELEASE_TITLE = 'Catto 0.7 — deck.gl Migration & Feed Filters';
+const RELEASE_TITLE = 'Catto 0.8 — Ollama AI, Correlations Engine, Timeline & SEA Feeds';
 
 const HEADLINE_FEATURE = {
-  icon: <Eye size={20} className="text-amber-400" />,
-  title: 'Watchlist Toast Flood Fix',
-  subtitle: 'Adding a vessel or flight to the watchlist no longer triggers a burst of toast notifications. Toasts are now suppressed during the 60-second startup warmup and rate-limited per entry.',
+  icon: <Radar size={20} className="text-cyan-400" />,
+  title: 'Ollama Local AI Integration',
+  subtitle: 'Catto v8.0 ships a fully on-device AI powered by Mistral-Nemo 12B via Ollama. Zero cloud calls — your data never leaves the machine. AI unloads from VRAM after 5 minutes of inactivity.',
   details: [
-    'Startup suppression: no watchlist toasts fire during the first 60 seconds — covers the period when all AIS/flight data arrives at once.',
-    'One toast per watchlist entry: if a search term matches 20 vessels, a single "VESSEL (+19 more) matched on map" notification fires instead of 20 simultaneous toasts.',
-    '72-hour cooldown per entity: vessels that briefly drop out of AIS coverage and reappear do not re-trigger their notification.',
-    'Baseline tracking: on first load, existing saved watchlist entries silently build their match baseline without any notifications.',
+    'Map popup ANALYSE button — summarises what\'s happening in any region using current GDELT + news data.',
+    'Telegram DIGEST — condenses the last 2 hours of Telegram signals into 3 intelligence bullet points.',
+    'News BRIEF button — morning brief from today\'s SEA headlines in intelligence-analyst style.',
+    'Correlation EXPLAIN — plain-English explanation for each cross-layer correlation alert.',
+    'Ask Catto input — free-text query at the bottom of the left sidebar. Ask anything about current map data.',
+    'Graceful degradation — if Ollama is offline, all AI buttons show "AI OFFLINE". Nothing breaks.',
   ],
-  callToAction: 'WATCHLIST ALERTS NOW FIRE ONCE PER ENTRY, NOT PER VESSEL',
+  callToAction: 'FULL ON-DEVICE AI — NO API KEY, NO CLOUD, NO TRACKING',
 };
 
 const NEW_FEATURES = [
   {
-    icon: <Plane size={18} className="text-cyan-400" />,
-    title: 'Regional Flight Control (v6.0)',
-    desc: 'USA and Europe civilian flights moved to Others tab, OFF by default. Asia-Pacific commercial, private, and jet traffic remains ON. Flights with no filed destination outside Asia are hidden by default.',
+    icon: <Radar size={18} className="text-cyan-400" />,
+    title: 'Rule-Based Correlation Engine (v8.0)',
+    desc: '10 correlation detectors: vessel within 50km of IMB piracy, GDELT spike + military in 200km, Telegram signal amplifier, CISA KEV spike, watchlist breach, breaking signal convergence, escalation alert, and more.',
     color: 'cyan',
   },
   {
-    icon: <Shield size={18} className="text-rose-400" />,
-    title: 'POTUS Airborne Alert (v6.0)',
-    desc: 'When Air Force One ICAO hex (adfdf8–adfdff) appears in tracked flights, a CRITICAL toast fires immediately. Resets on landing. Tracked flights and POTUS icons are never filtered by region.',
-    color: 'rose',
-  },
-  {
-    icon: <Globe size={18} className="text-amber-400" />,
-    title: 'Windows Auto-Installer (v6.0)',
-    desc: 'install.bat checks WSL, Docker Desktop, and Node.js; builds containers; installs Electron; creates desktop shortcut. Full API key guidance with registration links shown during setup.',
+    icon: <Clock size={18} className="text-amber-400" />,
+    title: 'Timeline / Snapshot Viewer (v8.0)',
+    desc: 'Backend snapshots all feed state every 15 minutes in SQLite — 96 snapshots = 24 hours of history. Scrubber bar above the locate input lets you rewind the map to any past moment. LIVE button snaps back.',
     color: 'amber',
   },
   {
-    icon: <Zap size={18} className="text-cyan-400" />,
-    title: 'Staggered Startup & Font Cache (v6.0)',
-    desc: 'Data fetches delayed to t+15s/t+45s — prevents startup OOM. Warmup progress bar. CARTO font proxy caches glyph tiles in memory; zero upstream requests after warmup.',
-    color: 'cyan',
+    icon: <Globe size={18} className="text-emerald-400" />,
+    title: 'Malaysia + SEA Regional Feeds (v8.0)',
+    desc: 'MetMalaysia weather stations, CWA Taiwan earthquake + typhoon alerts, ReliefWeb humanitarian crises (SEA), and ACAPS crisis severity data — all free, no API keys needed.',
+    color: 'emerald',
+  },
+  {
+    icon: <Zap size={18} className="text-yellow-400" />,
+    title: 'Smart Escalation Popups (v8.0)',
+    desc: 'When a HIGH-confidence correlation fires, a non-dismissible 10-second popup appears with ESCALATE / DISMISS actions. Ollama runs in background and adds an AI assessment after 15 seconds if online.',
+    color: 'yellow',
   },
 ];
 
@@ -71,6 +73,28 @@ const BUG_FIXES = [
 ];
 
 const VERSION_HISTORY = [
+  {
+    version: 'v8.0.0',
+    title: 'Ollama AI, Correlation Engine, Timeline & SEA Feeds',
+    items: [
+      'Ollama integration — Mistral-Nemo 12B on-device AI via Docker service; model loaded on-demand, VRAM freed after 5 min idle',
+      'ANALYSE button in map right-click popup — region summary from GDELT + news data',
+      'DIGEST button in Telegram/OSINT panel — last 2hr signals condensed to 3 bullet points',
+      'BRIEF button in news panel header — SEA morning briefing in intelligence style',
+      'EXPLAIN button per correlation row — plain-English explanation of why each alert matters',
+      'Ask Catto query input — free-text input at bottom of left sidebar, streams AI response',
+      'Graceful offline handling — all AI buttons show "AI OFFLINE" if Ollama unavailable',
+      'Correlation engine v2 — 10 detectors: vessel 50km piracy, GDELT+mil 200km, Telegram amplifier, CISA KEV spike, watchlist breach, breaking signal, escalation alert, domestic cyber, RF anomaly, maritime threat',
+      'Timeline scrubber — SQLite snapshot every 15 min, 96 × 24h history, scrub bar above locate input, LIVE button',
+      'MetMalaysia weather station feed — Malaysian weather observations (free, no key)',
+      'CWA Taiwan earthquake + typhoon alerts — api.cwa.gov.tw (free)',
+      'ReliefWeb humanitarian crisis data — SEA region (ReliefWeb API, free)',
+      'ACAPS crisis severity data — SEA filter (ACAPS public API, free)',
+      'Smart escalation popups — HIGH-confidence correlation triggers non-dismissible 10s popup with ESCALATE/DISMISS; Ollama assessment after 15s',
+      'Escalation suppression — 30-min dedup per event type + region; DND mode suppresses all popups for 1hr',
+      'All 4 new SEA feed layers added to World pillar with live count badges',
+    ],
+  },
   {
     version: 'v7.0.0',
     title: 'Full deck.gl Migration',

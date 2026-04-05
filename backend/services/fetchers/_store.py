@@ -63,6 +63,13 @@ class DashboardData(TypedDict, total=False):
     correlations: List[Dict[str, Any]]
     piracy_incidents: List[Dict[str, Any]]
     telegram_posts: List[Dict[str, Any]]
+    # v8.0.0 — Regional feeds (Malaysia + SEA)
+    regional_weather: List[Dict[str, Any]]
+    cwa_alerts: List[Dict[str, Any]]
+    reliefweb_events: List[Dict[str, Any]]
+    acaps_crises: List[Dict[str, Any]]
+    # v8.0.0 — Watchlist vessel IDs for correlation engine
+    watchlist_vessels: List[str]
 
 
 # In-memory store
@@ -109,6 +116,12 @@ latest_data: DashboardData = {
     "correlations": [],
     "piracy_incidents": [],
     "telegram_posts": [],
+    # v8.0.0 — Regional feeds (Malaysia + SEA)
+    "regional_weather": [],
+    "cwa_alerts": [],
+    "reliefweb_events": [],
+    "acaps_crises": [],
+    "watchlist_vessels": [],
 }
 
 # Per-source freshness timestamps

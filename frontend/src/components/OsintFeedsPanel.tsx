@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, ExternalLink, Rss } from 'lucide-react';
 import type { LiveUAmapIncident } from '@/types/dashboard';
+import OllamaButton from '@/components/OllamaButton';
 
 interface RssItem {
   source: string;
@@ -12,8 +13,19 @@ interface RssItem {
   summary: string;
 }
 
+interface TelegramPost {
+  id?: string | number;
+  channel?: string;
+  text?: string;
+  date?: string;
+  timestamp?: string;
+  lat?: number;
+  lng?: number;
+}
+
 interface Props {
   liveuamap?: LiveUAmapIncident[];
+  telegramPosts?: TelegramPost[];
 }
 
 function relTime(iso: string): string {
@@ -45,11 +57,24 @@ function useRss(source: string) {
   return items;
 }
 
-export default function OsintFeedsPanel({ liveuamap = [] }: Props) {
+export default function OsintFeedsPanel({ liveuamap = [], telegramPosts = [] }: Props) {
   const bcItems  = useRss('bellingcat');
   const [bcOpen, setBcOpen] = useState(true);
+  const [tgOpen, setTgOpen] = useState(true);
 
   const luaItems = liveuamap.slice(0, 3);
+
+  // Filter Telegram posts from last 2 hours
+  const twoHoursAgo = Date.now() - 2 * 3600 * 1000;
+  const recentTg = telegramPosts.filter((p) => {
+    const ts = p.date || p.timestamp;
+    if (!ts) return true; // include if no timestamp
+    try { return new Date(ts).getTime() >= twoHoursAgo; } catch { return true; }
+  }).slice(0, 10);
+
+  const tgDigestContext = recentTg.map((p) =>
+    `[${p.channel || 'unknown'}] ${p.text || ''}${p.date ? ` (${p.date})` : ''}`
+  ).join('\n');
 
   return (
     <div className="mt-2 flex flex-col gap-3">
@@ -123,6 +148,52 @@ export default function OsintFeedsPanel({ liveuamap = [] }: Props) {
         </div>
       )}
 
+
+      {/* ── Telegram Channels ─────────────────────────────────────────── */}
+      {(recentTg.length > 0 || telegramPosts.length > 0) && (
+        <div>
+          <div className="flex items-center gap-1.5 mb-1">
+            <button onClick={() => setTgOpen(o => !o)} className="flex items-center gap-1.5 flex-1 min-w-0">
+              <Rss size={9} className="text-blue-400 flex-shrink-0" />
+              <span className="text-[9px] font-mono font-bold tracking-[0.15em] text-blue-400/80 uppercase">
+                Telegram Signals
+              </span>
+              <span className="text-[7px] font-mono text-[var(--text-muted)] ml-1">{recentTg.length} / 2h</span>
+              {tgOpen ? <ChevronUp size={8} className="ml-auto text-blue-500/50" /> : <ChevronDown size={8} className="ml-auto text-blue-500/50" />}
+            </button>
+            <OllamaButton
+              label="DIGEST"
+              compact
+              prompt="Summarise these Telegram signals from the last 2 hours into exactly 3 bullet points. Focus on military movements, conflict events, or security incidents. Be direct and intelligence-style terse."
+              context={tgDigestContext || 'No recent Telegram posts available.'}
+            />
+          </div>
+          {tgOpen && (
+            <div className="flex flex-col gap-1">
+              {recentTg.length === 0 ? (
+                <p className="text-[8px] font-mono text-[var(--text-muted)]/50 pl-1">No Telegram signals in last 2h</p>
+              ) : (
+                recentTg.map((post, i) => (
+                  <div
+                    key={i}
+                    className="flex flex-col gap-0.5 bg-blue-950/10 border border-blue-900/20 px-2 py-1.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[8px] font-mono font-bold text-blue-400/80 truncate">{post.channel || 'Unknown'}</span>
+                      <span className="text-[7px] font-mono text-[var(--text-muted)]/60 flex-shrink-0 ml-1">{relTime(post.date || post.timestamp || '')}</span>
+                    </div>
+                    {post.text && (
+                      <p className="text-[9px] font-mono text-[var(--text-secondary)] leading-snug line-clamp-2">
+                        {post.text}
+                      </p>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
     </div>
   );

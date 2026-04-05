@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { X, FileText } from 'lucide-react';
+import { X, FileText, Bot } from 'lucide-react';
+import OllamaButton from '@/components/OllamaButton';
 
 interface Props {
   lat: number;
@@ -76,6 +77,14 @@ export default function MapContextMenu({ lat, lng, x, y, onRegionDossier, onClos
           <FileText size={9} className="text-cyan-400 flex-shrink-0" />
           <span className="text-[9px] text-gray-200 tracking-wide">REGION DOSSIER</span>
         </button>
+        <div className="px-3 py-1.5 border-t border-cyan-900/30">
+          <OllamaButton
+            label="ANALYSE REGION"
+            prompt={`Analyse what is currently happening near coordinates ${lat.toFixed(3)}°N, ${lng.toFixed(3)}°E. Summarise any notable GDELT conflict events, news incidents, maritime activity, or geopolitical tension in this area. Be concise — 3-4 sentences max.`}
+            context={placeName ? `Region: ${placeName} (${lat.toFixed(3)}, ${lng.toFixed(3)})` : `Coordinates: ${lat.toFixed(3)}, ${lng.toFixed(3)}`}
+            className="w-full"
+          />
+        </div>
       </div>
     </div>
   );

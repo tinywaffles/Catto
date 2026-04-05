@@ -93,6 +93,7 @@ from services.ais_stream import prune_stale_vessels  # noqa: F401
 from services.fetchers.mpa_supplementary import fetch_all_supplementary  # noqa: F401
 from services.fetchers.piracy import fetch_piracy  # noqa: F401
 from services.fetchers.telegram_channels import fetch_telegram_channels  # noqa: F401
+from services.fetchers.regional_feeds import fetch_all_regional_feeds  # noqa: F401
 from services.memory_manager import log_memory_usage  # noqa: F401
 
 logger = logging.getLogger(__name__)
@@ -199,16 +200,19 @@ def update_slow_data():
         fetch_all_supplementary,
         fetch_piracy,
         fetch_telegram_channels,
+        fetch_all_regional_feeds,
     ]
     _run_tasks("slow-tier", slow_funcs)
     # Run correlation engine after all data is fresh
     try:
-        from services.correlation_engine import compute_correlations
+        from services.correlation_engine import compute_correlations, compute_predictions
         with _data_lock:
             snapshot = dict(latest_data)
         correlations = compute_correlations(snapshot)
+        predictions = compute_predictions(snapshot, correlations)
         with _data_lock:
             latest_data["correlations"] = correlations
+            latest_data["predictions"] = predictions
     except Exception as e:
         logger.error("Correlation engine failed: %s", e)
     from services.fetchers._store import bump_data_version

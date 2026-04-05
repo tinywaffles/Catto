@@ -1,6 +1,6 @@
 {
   "name": "catto-desktop",
-  "version": "7.0.0",
+  "version": "8.0.0",
   "description": "Catto — OSINT Intelligence Dashboard (Desktop)",
   "main": "main.js",
   "private": true,

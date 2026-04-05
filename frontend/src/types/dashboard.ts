@@ -475,11 +475,22 @@ export interface FishingEvent {
 export interface CorrelationAlert {
   lat: number;
   lng: number;
-  type: 'rf_anomaly' | 'military_buildup' | 'infra_cascade';
+  type: 'rf_anomaly' | 'military_buildup' | 'infra_cascade' | 'maritime_threat' | 'cyber_threat';
   severity: 'high' | 'medium' | 'low';
   score: number;
   drivers: string[];
-  cell_size: number;
+  cell_size: number | null;
+}
+
+export interface PredictionAlert {
+  type: string;
+  label: string;
+  probability: number;
+  lat: number | null;
+  lng: number | null;
+  horizon: string;
+  drivers: string[];
+  severity: 'high' | 'medium' | 'low';
 }
 
 // ─── PATTERN ALERTS (frontend-computed, not stored in DashboardData) ─────────
@@ -968,8 +979,9 @@ export interface DashboardData {
   ucdp_conflict?: UcdpConflictEvent[];
   acled_events?: AcledEvent[];
 
-  // Cross-layer correlations
+  // Cross-layer correlations + predictions
   correlations?: CorrelationAlert[];
+  predictions?: PredictionAlert[];
 
   // FIMI disinformation
   fimi?: FimiData;
@@ -1111,6 +1123,11 @@ export interface ActiveLayers {
   conflict_events: boolean;
   show_us_traffic: boolean;
   piracy_incidents: boolean;
+  // v8.0.0 — Regional feeds (Malaysia + SEA)
+  regional_weather: boolean;
+  cwa_alerts: boolean;
+  reliefweb_events: boolean;
+  acaps_crises: boolean;
 }
 
 export interface SelectedEntity {
