@@ -10,9 +10,11 @@ interface OllamaButtonProps {
   context?: string;
   className?: string;
   compact?: boolean;
+  /** When true, response panel floats above the button instead of below */
+  popupUp?: boolean;
 }
 
-export default function OllamaButton({ label, prompt, context, className, compact }: OllamaButtonProps) {
+export default function OllamaButton({ label, prompt, context, className, compact, popupUp }: OllamaButtonProps) {
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<string | null>(null);
   const [offline, setOffline] = useState(false);
@@ -90,8 +92,22 @@ export default function OllamaButton({ label, prompt, context, className, compac
     );
   }
 
+  const responsePanel = response && expanded ? (
+    <div className="p-2 bg-cyan-950/20 border border-cyan-900/30 text-[9px] font-mono text-[var(--text-secondary)] leading-relaxed max-h-40 overflow-y-auto styled-scrollbar whitespace-pre-wrap">
+      {response}
+      {loading && <span className="animate-pulse text-cyan-500">▊</span>}
+    </div>
+  ) : null;
+
   return (
-    <div className={className}>
+    <div className={`${popupUp ? 'relative' : ''} ${className ?? ''}`}>
+      {/* When popupUp, show response panel above */}
+      {popupUp && responsePanel && (
+        <div className="absolute bottom-full left-0 mb-1.5 w-72 z-50 shadow-xl">
+          {responsePanel}
+        </div>
+      )}
+
       <div className="flex items-center gap-1">
         <button
           onClick={handleQuery}
@@ -122,10 +138,10 @@ export default function OllamaButton({ label, prompt, context, className, compac
         )}
       </div>
 
-      {response && expanded && (
-        <div className="mt-1.5 p-2 bg-cyan-950/20 border border-cyan-900/30 text-[9px] font-mono text-[var(--text-secondary)] leading-relaxed max-h-40 overflow-y-auto styled-scrollbar whitespace-pre-wrap">
-          {response}
-          {loading && <span className="animate-pulse text-cyan-500">▊</span>}
+      {/* When not popupUp, show response panel below as normal */}
+      {!popupUp && responsePanel && (
+        <div className="mt-1.5">
+          {responsePanel}
         </div>
       )}
     </div>

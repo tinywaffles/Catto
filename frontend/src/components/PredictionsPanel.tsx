@@ -21,6 +21,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { API_BASE } from '@/lib/api';
+import OllamaButton from '@/components/OllamaButton';
 import { getNodeIdentity, nextSequence } from '@/mesh/meshIdentity';
 import { validateEventPayload } from '@/mesh/meshSchema';
 import { getActiveSigningContext, signMeshEvent } from '@/mesh/wormholeIdentityClient';
@@ -348,6 +349,13 @@ function MarketModal({
               </span>
             )}
           </div>
+
+          {/* AI Brief */}
+          <OllamaButton
+            label="WHAT IS THIS?"
+            prompt={`Briefly explain this prediction market in 2-3 sentences: what is being predicted, what does the current probability mean, and what real-world events are relevant. Market: "${market.title}". Category: ${market.category}. Current probability: ${market.consensus_pct ?? market.polymarket_pct ?? 50}%. Be direct and intelligence-style concise.`}
+            context={market.description ? `Resolution criteria: ${market.description.slice(0, 400)}` : undefined}
+          />
 
           {/* Resolution stipulation / Description */}
           {market.description && (

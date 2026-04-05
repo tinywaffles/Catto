@@ -7,7 +7,7 @@ services:
       dockerfile: backend/Dockerfile
     container_name: catto-backend
     ports:
-      - "${BIND:-127.0.0.1}:8002:8002"
+      - "${BIND:-127.0.0.1}:8002:8000"
     environment:
       - AIS_API_KEY=${AIS_API_KEY}
       - OPENSKY_CLIENT_ID=${OPENSKY_CLIENT_ID}

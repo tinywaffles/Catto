@@ -29,6 +29,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 
 import ThreatIntelPanel from '@/components/ThreatIntelPanel';
 import CorrelationPanel from '@/components/CorrelationPanel';
+import OllamaButton from '@/components/OllamaButton';
 import CattoIntelPanel from '@/components/CattoIntelPanel';
 import TimelineScrubber from '@/components/TimelineScrubber';
 import EscalationPopup, { useEscalationMonitor, markSuppressed, setDnd } from '@/components/EscalationPopup';
@@ -459,6 +460,7 @@ export default function Dashboard() {
   const { entries: watchlistEntries, addEntry: addWatchlistEntry, removeEntry: removeWatchlistEntry, watchedEntities } = useWatchlist();
   const backendStatus = useBackendStatus();
   const spaceWeather = useDataKey('space_weather');
+  const newsForBrief = useDataKey('news') as Array<{ title: string; source?: string }> | null;
   const { regionStatus } = useSituationDetector();
   const overallStatus = Object.values(regionStatus).includes('red')
     ? 'red'
@@ -622,6 +624,24 @@ export default function Dashboard() {
   // Onboarding & connection status
   const { showOnboarding, setShowOnboarding } = useOnboarding();
   const { showChangelog, setShowChangelog } = useChangelog();
+
+  // Build situational brief context for the BRIEF button
+  const situationalBriefContext = useMemo(() => {
+    const lines: string[] = [`Global status: ${STATUS_LABEL[overallStatus] ?? overallStatus}`];
+    if (correlationsForEscalation.length > 0) {
+      lines.push('Active alerts:');
+      correlationsForEscalation.slice(0, 6).forEach((c) => {
+        lines.push(`- ${c.type} [${c.severity}] score:${c.score} drivers:${c.drivers.slice(0, 2).join(', ')}`);
+      });
+    }
+    if (newsForBrief && newsForBrief.length > 0) {
+      lines.push('Recent headlines:');
+      newsForBrief.slice(0, 10).forEach((n) => {
+        lines.push(`- ${n.title}${n.source ? ` (${n.source})` : ''}`);
+      });
+    }
+    return lines.join('\n');
+  }, [overallStatus, correlationsForEscalation, newsForBrief]);
 
   return (
     <>
@@ -937,6 +957,20 @@ export default function Dashboard() {
                     <div className={`text-[11px] font-mono font-bold ${STATUS_COLOR[overallStatus]}`}>
                       {STATUS_LABEL[overallStatus]}
                     </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="w-px h-6 bg-[var(--border-primary)]" />
+
+                  {/* Situational Brief */}
+                  <div className="flex flex-col items-center justify-center">
+                    <OllamaButton
+                      label="BRIEF"
+                      compact
+                      popupUp
+                      prompt="You are a concise intelligence analyst. Summarise the current global situation in 3 short bullets covering: (1) most significant active alert, (2) top news story, (3) overall threat level assessment. Be direct and terse."
+                      context={situationalBriefContext}
+                    />
                   </div>
                 </div>
               </motion.div>
