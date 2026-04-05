@@ -8641,6 +8641,7 @@ async def ollama_query(request: Request):
                         "system": system_prompt,
                         "prompt": full_prompt,
                         "stream": True,
+                        "keep_alive": "5m",
                         "options": {"num_predict": 1024, "temperature": 0.3},
                     },
                 ) as resp:

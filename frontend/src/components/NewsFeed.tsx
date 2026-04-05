@@ -3,7 +3,6 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
-import { OllamaQueryInput } from '@/components/OllamaButton';
 import React, { useEffect, useRef, useCallback } from 'react';
 import WikiImage from '@/components/WikiImage';
 import type { SelectedEntity, RegionDossier, FimiData } from "@/types/dashboard";
@@ -157,7 +156,6 @@ function NewsFeedInner({ selectedEntity, regionDossier, regionDossierLoading, on
       'airports', 'last_updated', 'threat_level',
       'ransomware_iocs', 'feodo_c2', 'otx_pulses',
       'singcert_advisories', 'mrt_alerts',
-      'correlations', 'telegram_posts', 'earthquakes', 'firms_fires',
     ] as const);
     const { addEntry: addWatchlistEntry } = useWatchlist();
     const [isMinimized, setIsMinimized] = useState(false);
@@ -181,88 +179,6 @@ function NewsFeedInner({ selectedEntity, regionDossier, regionDossierLoading, on
 
     const news = data?.news || [];
     const fimi: FimiData | undefined = data?.fimi;
-
-    // Build comprehensive intelligence context from all live Catto feeds
-    const cattoIntelContext = useMemo(() => {
-        const lines: string[] = [];
-
-        // Threat level
-        if ((data as any)?.threat_level) {
-            const tl = (data as any).threat_level;
-            lines.push(`THREAT LEVEL: ${tl.level} (${tl.score}/100)`);
-            if (tl.drivers?.length) lines.push(`Threat drivers: ${tl.drivers.slice(0, 5).join(', ')}`);
-        }
-
-        // Correlations
-        const corrs = (data as any)?.correlations || [];
-        if (corrs.length) {
-            lines.push(`\nACTIVE CORRELATIONS (${corrs.length}):`);
-            corrs.slice(0, 10).forEach((c: any) => {
-                lines.push(`- [${c.severity?.toUpperCase()}] ${c.type} — score:${c.score} — ${(c.drivers || []).slice(0, 3).join('; ')}`);
-            });
-        }
-
-        // News headlines
-        const newsItems = news.slice(0, 15);
-        if (newsItems.length) {
-            lines.push(`\nNEWS FEED (${newsItems.length} items):`);
-            newsItems.forEach((n: any) => {
-                lines.push(`- [${n.source || 'unknown'}] ${n.title}${n.risk_score >= 7 ? ` (RISK:${n.risk_score})` : ''}`);
-            });
-        }
-
-        // Telegram signals
-        const tg = ((data as any)?.telegram_posts || []).filter((p: any) => p.text?.length > 10);
-        if (tg.length) {
-            lines.push(`\nTELEGRAM SIGNALS (${tg.length} recent):`);
-            tg.slice(0, 8).forEach((p: any) => {
-                lines.push(`- [${p.channel || 'unknown'}] ${String(p.text || '').slice(0, 150)}`);
-            });
-        }
-
-        // Military activity
-        const milFlights = (data as any)?.military_flights || [];
-        const ships = (data as any)?.ships || [];
-        const milShips = ships.filter((s: any) => s.type === 'carrier' || s.type === 'military_vessel');
-        if (milFlights.length || milShips.length) {
-            lines.push(`\nMILITARY ACTIVITY:`);
-            if (milFlights.length) lines.push(`- ${milFlights.length} military aircraft tracked`);
-            if (milShips.length) lines.push(`- ${milShips.length} military vessels tracked`);
-            milFlights.slice(0, 5).forEach((f: any) => {
-                if (f.callsign || f.operator) lines.push(`  • ${f.callsign || ''} ${f.operator || ''} (${f.origin_country || ''})`.trim());
-            });
-        }
-
-        // GDELT conflict events
-        const gdelt = (data as any)?.gdelt || [];
-        if (gdelt.length) {
-            lines.push(`\nCONFLICT EVENTS (GDELT): ${gdelt.length} events`);
-            gdelt.slice(0, 5).forEach((e: any) => {
-                lines.push(`- ${e.title || e.headline || JSON.stringify(e).slice(0, 80)}`);
-            });
-        }
-
-        // FIMI disinformation
-        if (fimi?.narratives?.length) {
-            lines.push(`\nDISINFORMATION WATCH:`);
-            fimi.narratives.slice(0, 5).forEach((n: any) => {
-                lines.push(`- ${n.title || n.narrative || String(n).slice(0, 100)}`);
-            });
-            if (fimi.major_wave) lines.push(`⚠ MAJOR DISINFO WAVE DETECTED${fimi.major_wave_target ? ` targeting: ${fimi.major_wave_target}` : ''}`);
-        }
-
-        // Earthquakes
-        const quakes = (data as any)?.earthquakes || [];
-        const bigQuakes = quakes.filter((q: any) => (q.magnitude || q.mag || 0) >= 5.0);
-        if (bigQuakes.length) {
-            lines.push(`\nSIGNIFICANT EARTHQUAKES (M5.0+): ${bigQuakes.length}`);
-            bigQuakes.slice(0, 3).forEach((q: any) => {
-                lines.push(`- M${q.magnitude || q.mag} — ${q.place || q.location || 'unknown location'}`);
-            });
-        }
-
-        return lines.join('\n');
-    }, [data, news, fimi]);
 
     // Cross-reference: check if a news article title matches any FIMI disinfo keywords
     const fimiKeywords = useMemo(() => fimi?.disinfo_keywords || [], [fimi?.disinfo_keywords]);
@@ -1445,18 +1361,6 @@ function NewsFeedInner({ selectedEntity, regionDossier, regionDossierLoading, on
                 <button className="text-cyan-500 hover:text-[var(--text-primary)] transition-colors">
                     {isMinimized ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
                 </button>
-            </div>
-
-            {/* Ask Catto — always visible, not blocked by collapse */}
-            <div
-                className="border-b border-[var(--border-primary)]/40 pointer-events-auto"
-                onClick={(e) => e.stopPropagation()}
-            >
-                <OllamaQueryInput
-                    large
-                    placeholder="What is the current threat picture? Summarise latest activity..."
-                    context={cattoIntelContext}
-                />
             </div>
 
             {/* Threat Level Indicator */}

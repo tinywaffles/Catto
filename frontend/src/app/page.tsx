@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Bot, X } from 'lucide-react';
 import WorldviewLeftPanel from '@/components/WorldviewLeftPanel';
 
 import NewsFeed from '@/components/NewsFeed';
@@ -29,7 +29,6 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 
 import ThreatIntelPanel from '@/components/ThreatIntelPanel';
 import CorrelationPanel from '@/components/CorrelationPanel';
-import OllamaButton from '@/components/OllamaButton';
 import CattoIntelPanel from '@/components/CattoIntelPanel';
 import TimelineScrubber from '@/components/TimelineScrubber';
 import EscalationPopup, { useEscalationMonitor, markSuppressed, setDnd } from '@/components/EscalationPopup';
@@ -626,6 +625,13 @@ export default function Dashboard() {
   const { showOnboarding, setShowOnboarding } = useOnboarding();
   const { showChangelog, setShowChangelog } = useChangelog();
 
+  // Intelligence Brief modal state
+  const [briefOpen, setBriefOpen] = useState(false);
+  const [briefText, setBriefText] = useState('');
+  const [briefLoading, setBriefLoading] = useState(false);
+  const [briefStarted, setBriefStarted] = useState(false);
+  const briefAbortRef = useRef<AbortController | null>(null);
+
   // Build situational brief context for the BRIEF button
   const situationalBriefContext = useMemo(() => {
     const lines: string[] = [`Global status: ${STATUS_LABEL[overallStatus] ?? overallStatus}`];
@@ -654,6 +660,65 @@ export default function Dashboard() {
     }
     return lines.join('\n');
   }, [overallStatus, correlationsForEscalation, newsForBrief, telegramForBrief]);
+
+  const runBrief = useCallback(async () => {
+    // Abort any in-flight brief before starting a new one
+    briefAbortRef.current?.abort();
+    const abort = new AbortController();
+    briefAbortRef.current = abort;
+
+    // Hard 90-second frontend timeout — prevents runaway resource use
+    const timeoutId = setTimeout(() => abort.abort(), 90_000);
+
+    setBriefLoading(true);
+    setBriefText('');
+    setBriefStarted(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/ollama/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: 'Generate a comprehensive intelligence brief covering: (1) most critical active alert and what it signals, (2) key patterns across news and Telegram feeds and what they indicate, (3) current threat trajectory and escalation risk, (4) what to watch in the next 12-24 hours. Be specific, analytical, and actionable.',
+          context: situationalBriefContext,
+        }),
+        signal: abort.signal,
+      });
+
+      if (!res.ok || !res.body) { setBriefText('ERROR: Could not reach Catto AI.'); return; }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let text = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        for (const line of decoder.decode(value, { stream: true }).split('\n').filter(Boolean)) {
+          try {
+            const d = JSON.parse(line);
+            if (d.response) { text += d.response; setBriefText(text); }
+            if (d.error) { setBriefText(`AI OFFLINE: ${d.error}`); reader.cancel(); return; }
+          } catch { /* skip */ }
+        }
+      }
+    } catch (err) {
+      if ((err as Error)?.name === 'AbortError') {
+        setBriefText((t) => t || 'Brief cancelled.');
+      } else {
+        setBriefText('ERROR: Could not connect to Catto AI.');
+      }
+    } finally {
+      clearTimeout(timeoutId);
+      setBriefLoading(false);
+    }
+  }, [situationalBriefContext]);
+
+  useEffect(() => {
+    if (briefOpen && !briefStarted) {
+      runBrief();
+    }
+  }, [briefOpen, briefStarted, runBrief]);
 
   return (
     <>
@@ -969,18 +1034,18 @@ export default function Dashboard() {
                   {/* Divider */}
                   <div className="w-px h-6 bg-[var(--border-primary)]" />
 
-                  {/* Situational Brief — stopPropagation prevents cycleStyle from firing */}
+                  {/* Situational Brief — opens full-screen modal */}
                   <div
                     className="flex flex-col items-center justify-center"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <OllamaButton
-                      label="BRIEF"
-                      compact
-                      popupUp
-                      prompt="You are a senior intelligence analyst. Using all provided data, give a full situational assessment covering: (1) most critical active alert and what it signals, (2) key news and Telegram signals and how they correlate, (3) current threat trajectory — is it escalating, stable, or de-escalating, (4) what to watch out for in the next 24h. Be direct, specific, and actionable. No filler."
-                      context={situationalBriefContext}
-                    />
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setBriefOpen(true); setBriefStarted(false); }}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 border text-[9px] font-mono tracking-wide transition-colors border-cyan-800/50 text-cyan-400 hover:bg-cyan-900/20 hover:border-cyan-600/60"
+                    >
+                      <Bot size={8} />
+                      BRIEF
+                    </button>
                   </div>
                 </div>
               </motion.div>
@@ -1265,6 +1330,65 @@ export default function Dashboard() {
         </motion.div>
 
       </main>
+
+      {/* INTELLIGENCE BRIEF MODAL */}
+      {briefOpen && (
+        <div className="fixed inset-0 z-[9500] flex items-center justify-center bg-black/80 backdrop-blur-sm pointer-events-auto">
+          <div className="w-full max-w-2xl max-h-[80vh] bg-[#060a12] border border-cyan-800/50 flex flex-col font-mono shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-cyan-800/40">
+              <div className="flex items-center gap-2">
+                <Bot size={14} className="text-cyan-400" />
+                <span className="text-[13px] font-bold tracking-[0.2em] text-cyan-400">INTELLIGENCE BRIEF</span>
+                {briefLoading && <div className="w-3 h-3 border border-cyan-500 border-t-transparent rounded-full animate-spin" />}
+              </div>
+              <button onClick={() => { briefAbortRef.current?.abort(); setBriefOpen(false); }} className="text-[var(--text-muted)] hover:text-white transition-colors">
+                <X size={16} />
+              </button>
+            </div>
+            {/* Status/timestamp */}
+            <div className="px-5 py-2 border-b border-[var(--border-primary)] flex items-center justify-between">
+              <span className={`text-[9px] font-mono font-bold tracking-widest ${STATUS_COLOR[overallStatus]}`}>
+                GLOBAL STATUS: {STATUS_LABEL[overallStatus]}
+              </span>
+              <span className="text-[8px] text-[var(--text-muted)] font-mono">{new Date().toUTCString()}</span>
+            </div>
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto px-5 py-4 styled-scrollbar">
+              {!briefStarted && !briefLoading && !briefText && (
+                <div className="flex flex-col items-center justify-center h-32 gap-3">
+                  <button
+                    onClick={runBrief}
+                    className="px-6 py-2.5 bg-cyan-950/40 border border-cyan-700/50 text-cyan-400 text-[11px] font-mono tracking-widest hover:bg-cyan-900/30 transition-colors"
+                  >
+                    GENERATE INTELLIGENCE BRIEF
+                  </button>
+                  <p className="text-[8px] text-[var(--text-muted)] text-center">Synthesises all live Catto feeds into finished intelligence</p>
+                </div>
+              )}
+              {briefText && (
+                <div className="text-[11px] text-[var(--text-secondary)] font-mono leading-relaxed whitespace-pre-wrap">
+                  {briefText}
+                  {briefLoading && <span className="animate-pulse text-cyan-500">▊</span>}
+                </div>
+              )}
+              {briefLoading && !briefText && (
+                <div className="flex items-center gap-2 text-[10px] text-cyan-500 font-mono">
+                  <div className="w-3 h-3 border border-cyan-500 border-t-transparent rounded-full animate-spin" />
+                  Analysing feeds...
+                </div>
+              )}
+            </div>
+            {/* Footer */}
+            {briefText && !briefLoading && (
+              <div className="px-5 py-2 border-t border-[var(--border-primary)] flex justify-between items-center">
+                <button onClick={runBrief} className="text-[9px] font-mono text-cyan-400 hover:text-cyan-300 transition-colors">↺ REFRESH</button>
+                <button onClick={() => { briefAbortRef.current?.abort(); setBriefOpen(false); setBriefText(''); setBriefStarted(false); }} className="text-[9px] font-mono text-[var(--text-muted)] hover:text-white transition-colors">CLOSE</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }
